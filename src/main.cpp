@@ -31,7 +31,19 @@ std::vector<std::string> split(const std::string& str, char delimiter) {
   return result;
 }
 
+bool contains(const char* const str[], size_t size, const std::string& value) {
+  for (size_t i = 0; i < size; i++) {
+    if (str[i] == value) {
+      return true;
+    }
+  }
+  return false;
+}
+
 int main() {
+  const char* const commands[] = {"type", "echo", "exit"};
+  const unsigned int no_of_commands = sizeof(commands) / sizeof(commands[0]);
+
   while (true) {
     // Flush after every std::cout / std:cerr
     std::cout << std::unitbuf;
@@ -61,7 +73,15 @@ int main() {
         std::cout << tokens[i] << ' ';
       }
       std::cout << "\n";
-    } else {
+    }
+
+    else if (tokens[0] == "type") {
+      if (tokens.size() >= 2 && contains(commands, no_of_commands, tokens[1])) {
+        std::cout << tokens[1] << " is a shell builtin\n";
+      }
+    }
+
+    else {
       if (!input.empty()) {
         std::cout << input << ": command not found" << std::endl;
       }
