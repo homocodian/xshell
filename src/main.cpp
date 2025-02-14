@@ -1,4 +1,6 @@
 #include <iostream>
+#include <sstream>
+#include <vector>
 
 std::string trim(const std::string& str) {
   size_t start = str.find_first_not_of(" \t\n\r\f\v");
@@ -16,27 +18,17 @@ bool isNumber(const std::string& str) {
          str.find_first_not_of("-0123456789") == std::string::npos;
 }
 
-int getExitCode(const std::string& str) {
-  if (str.size() < 6) {
-    throw std::invalid_argument("Input string is too short.");
+std::vector<std::string> split(const std::string& str, char delimiter) {
+  std::vector<std::string> result;
+  std::istringstream stream(str);
+  std::string token;
+
+  // Use getline to read each token separated by the delimiter
+  while (std::getline(stream, token, delimiter)) {
+    result.push_back(token);
   }
 
-  // exit + 1 whitespace -> 0-4 char
-  std::string exit_code = str.substr(5);
-
-  if (!isNumber(exit_code)) {
-    throw std::invalid_argument("Extracted exit code is not a valid number.");
-  }
-
-  try {
-    return std::stoi(exit_code);
-  } catch (const std::invalid_argument&) {
-    throw std::invalid_argument(
-        "The exit code cannot be converted to an integer.");
-  } catch (const std::out_of_range&) {
-    throw std::out_of_range(
-        "The exit code is out of the range for an integer.");
-  }
+  return result;
 }
 
 int main() {
@@ -52,13 +44,10 @@ int main() {
     std::getline(std::cin, input);
 
     input = trim(input);
+    std::vector<std::string> tokens = split(input, ' ');
 
-    if (input.find("exit ") != std::string::npos) {
-      try {
-        int exit_code = getExitCode(input);
-        exit(exit_code);
-      } catch (const std::exception& e) {
-      }
+    if (tokens[0] == "exit" && tokens.size() == 2 && isNumber(tokens[1])) {
+      exit(std::stoi(tokens[1]));
     }
 
     if (!input.empty()) {
