@@ -44,14 +44,27 @@ int main() {
     std::getline(std::cin, input);
 
     input = trim(input);
+
+    if (input == "exit") {
+      exit(EXIT_SUCCESS);
+    }
+
     std::vector<std::string> tokens = split(input, ' ');
 
     if (tokens[0] == "exit" && tokens.size() == 2 && isNumber(tokens[1])) {
       exit(std::stoi(tokens[1]));
     }
 
-    if (!input.empty()) {
-      std::cout << input << ": command not found" << std::endl;
+    if (tokens[0] == "echo") {
+      size_t size = tokens.size();
+      for (size_t i = 1; i < size; i++) {
+        std::cout << tokens[i] << ' ';
+      }
+      std::cout << "\n";
+    } else {
+      if (!input.empty()) {
+        std::cout << input << ": command not found" << std::endl;
+      }
     }
   }
 }
