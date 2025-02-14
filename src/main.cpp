@@ -61,23 +61,27 @@ int main() {
       exit(EXIT_SUCCESS);
     }
 
-    std::vector<std::string> tokens = split(input, ' ');
+    const std::vector<std::string> tokens = split(input, ' ');
+    size_t tokens_size = tokens.size();
 
     if (tokens[0] == "exit" && tokens.size() == 2 && isNumber(tokens[1])) {
       exit(std::stoi(tokens[1]));
     }
 
     if (tokens[0] == "echo") {
-      size_t size = tokens.size();
-      for (size_t i = 1; i < size; i++) {
+      for (size_t i = 1; i < tokens_size; i++) {
         std::cout << tokens[i] << ' ';
       }
       std::cout << "\n";
     }
 
     else if (tokens[0] == "type") {
-      if (tokens.size() >= 2 && contains(commands, no_of_commands, tokens[1])) {
-        std::cout << tokens[1] << " is a shell builtin\n";
+      for (size_t i = 1; i < tokens_size; i++) {
+        if (contains(commands, no_of_commands, tokens[i])) {
+          std::cout << tokens[i] << " is a shell builtin\n";
+        } else {
+          std::cout << tokens[i] << ": not found" << std::endl;
+        }
       }
     }
 
