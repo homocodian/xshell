@@ -1,0 +1,12 @@
+#ifndef ERRORS_H
+#define ERRORS_H
+
+enum Error {
+  NO_CHILD_PROCESS = 1,
+  NOT_FOUND,
+  CREATE_JOB,
+  SET_INFO_JOB_OBJECT,
+  ASSIGN_PROCESS_TO_JOB
+};
+
+#endif // !ERRORS_H

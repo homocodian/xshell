@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "env.h"
+#include "rcommand.h"
 #include "utils.h"
 
 int main(int argc, const char *argv[]) {
@@ -71,10 +72,9 @@ int main(int argc, const char *argv[]) {
           }
         }
       }
-    }
-
-    else {
-      if (!input.empty()) {
+    } else {
+      int status_code = runCommand(tokens[0], tokens);
+      if (status_code != 0 && !input.empty()) {
         std::cout << input << ": command not found" << std::endl;
       }
     }
