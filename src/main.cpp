@@ -10,8 +10,8 @@
 #include "utils.h"
 
 int main() {
-  const std::array<const char *, 4> builtin_commands = {"type", "echo", "exit",
-                                                        "pwd"};
+  const std::array<const char *, 5> builtin_commands = {"type", "echo", "exit",
+                                                        "pwd", "cd"};
   Env env;
 
   while (true) {
@@ -55,6 +55,14 @@ int main() {
 
     else if (command == "pwd") {
       std::cout << std::filesystem::current_path().string() << "\n";
+    }
+
+    else if (command == "cd") {
+      if (tokens_size > 2) {
+        std::cerr << "cd: too many arguments\n";
+      } else if (tokens_size == 2) {
+        CommandHandler::changeDirectory(tokens[1]);
+      }
     }
 
     else {

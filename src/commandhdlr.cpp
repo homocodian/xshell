@@ -1,13 +1,14 @@
+#include <cerrno>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <string>
 #include <vector>
 
 #ifdef _WIN32
+#include <direct.h>
 #include <windows.h>
 #else
-#include <cerrno>
-#include <cstring>
 #include <unistd.h>
 #include <wait.h>
 #endif // _WIN32
@@ -163,5 +164,22 @@ void CommandHandler::handleType(const std::vector<std::string> &tokens,
         std::cout << tokens[i] << ": not found" << std::endl;
       }
     }
+  }
+}
+
+void CommandHandler::changeDirectory(const std::string &path) {
+
+#ifdef _WIN32
+  int status = _chdir(path.c_str());
+#elif defined(__unix__) || defined(__linux__) || defined(__APPLE__)
+  int status = chdir(path.c_str());
+#else
+  std::cerr << "Platform not supported" << std::endl;
+  exit(EXIT_FAILURE);
+#endif
+
+  if (status == -1) {
+    std::cerr << "cd: " << path << ": "
+              << "No such file or directory" << std::endl;
   }
 }
