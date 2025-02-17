@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -175,8 +174,6 @@ void CommandHandler::changeDirectory(const std::string &path) {
 
   if (path == "~") {
     const char *home_dir = std::getenv("USERPROFILE");
-    std::cerr << "DEBUGPRINT[1]: commandhdlr.cpp:178: home_dir=" << home_dir
-              << std::endl;
 
     if (home_dir == nullptr) {
       std::cerr << "cd: Unable to find home directory\n";
@@ -192,8 +189,6 @@ void CommandHandler::changeDirectory(const std::string &path) {
 
   if (path == "~") {
     const char *home_dir = std::getenv("HOME");
-    std::cerr << "DEBUGPRINT[1]: commandhdlr.cpp:178: home_dir=" << home_dir
-              << std::endl;
 
     if (home_dir == nullptr) {
       std::cerr << "cd: Unable to find home directory\n";
