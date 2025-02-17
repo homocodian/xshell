@@ -28,7 +28,6 @@ int main() {
     input = utils::trim(input);
 
     if (input == "exit") {
-      // command_handler.terminateChildProccess();
       exit(EXIT_SUCCESS);
     }
 
@@ -37,7 +36,6 @@ int main() {
     const std::string &command = tokens[0];
 
     if (command == "exit" && tokens.size() == 2 && utils::isNumber(tokens[1])) {
-      // command_handler.terminateChildProccess();
       exit(std::stoi(tokens[1]));
     }
 

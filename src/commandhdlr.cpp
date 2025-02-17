@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -168,11 +169,42 @@ void CommandHandler::handleType(const std::vector<std::string> &tokens,
 }
 
 void CommandHandler::changeDirectory(const std::string &path) {
+  int status = -1;
 
 #ifdef _WIN32
-  int status = _chdir(path.c_str());
+
+  if (path == "~") {
+    const char *home_dir = std::getenv("USERPROFILE");
+    std::cerr << "DEBUGPRINT[1]: commandhdlr.cpp:178: home_dir=" << home_dir
+              << std::endl;
+
+    if (home_dir == nullptr) {
+      std::cerr << "cd: Unable to find home directory\n";
+      return;
+    }
+
+    status = _chdir(home_dir);
+  } else {
+    status = _chdir(path.c_str());
+  }
+
 #elif defined(__unix__) || defined(__linux__) || defined(__APPLE__)
-  int status = chdir(path.c_str());
+
+  if (path == "~") {
+    const char *home_dir = std::getenv("HOME");
+    std::cerr << "DEBUGPRINT[1]: commandhdlr.cpp:178: home_dir=" << home_dir
+              << std::endl;
+
+    if (home_dir == nullptr) {
+      std::cerr << "cd: Unable to find home directory\n";
+      return;
+    }
+
+    status = chdir(home_dir);
+  } else {
+    status = chdir(path.c_str());
+  }
+
 #else
   std::cerr << "Platform not supported" << std::endl;
   exit(EXIT_FAILURE);
