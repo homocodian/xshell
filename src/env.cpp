@@ -8,30 +8,35 @@
 #include <sys/stat.h> // For stat() function and S_IXUSR macro
 #endif
 
+#include "env.h"
 #include "utils.h"
 
-namespace Env {
-std::optional<std::vector<std::string>> getDirs() {
+std::vector<std::string> &Env::getDirs() {
+
+  if (!this->path_dirs.empty()) {
+    return this->path_dirs;
+  }
+
   const char *path = getenv("PATH");
 
   if (path == NULL) {
-    return std::nullopt;
+    return this->path_dirs;
   }
 
   const auto os = utils::getOS();
 
   if (os == utils::OS::Unknown) {
-    utils::terminateProcessWithMessage("Error: Unknown OS");
+    utils::exitWithMessage("Error: Unknown OS");
   }
 
   if (os == utils::OS::Windows) {
-    return utils::split(path, ';');
+    return this->path_dirs = utils::split(path, ';');
   } else {
-    return utils::split(path, ':');
+    return this->path_dirs = utils::split(path, ':');
   }
 }
 
-bool isExecutable(const std::string &path) {
+bool Env::isExecutable(const std::string &path) {
 #ifdef _WIN32
   // Windows-specific check for executability
   DWORD file_Attr = GetFileAttributes((path + ".exe").c_str());
@@ -53,8 +58,8 @@ bool isExecutable(const std::string &path) {
 #endif
 }
 
-std::optional<std::string> getExePath(const std::string &dir,
-                                      const std::string &executable) {
+std::optional<std::string> Env::getExePath(const std::string &dir,
+                                           const std::string &executable) {
   std::string file_path = dir;
   size_t slash_pos = dir.find_first_of("/\\");
 
@@ -75,4 +80,18 @@ std::optional<std::string> getExePath(const std::string &dir,
 
   return std::nullopt;
 }
-} // namespace Env
+
+std::optional<std::string> Env::getExePathFromPATH(const std::string &exe) {
+  std::optional<std::string> exe_path = std::nullopt;
+
+  auto dirs = this->getDirs();
+  for (auto &&dir : dirs) {
+    exe_path = this->getExePath(dir, exe);
+
+    if (exe_path) {
+      return exe_path;
+    }
+  }
+
+  return std::nullopt;
+}

@@ -1,16 +1,24 @@
-#include "errors.h"
+#include <cstdlib>
+#include <iostream>
 #include <string>
 #include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
 #else
+#include <cerrno>
+#include <cstring>
 #include <unistd.h>
 #include <wait.h>
 #endif // _WIN32
 
-int runCommand(const std::string &command,
-               const std::vector<std::string> &args) {
+#include "commandhdlr.h"
+#include "env.h"
+#include "errors.h"
+#include "utils.h"
+
+int CommandHandler::run(const std::string &command,
+                        const std::vector<std::string> &args) {
 
 #ifdef _WIN32
 
@@ -112,18 +120,48 @@ int runCommand(const std::string &command,
       unix_args.emplace_back(it->c_str());
     }
 
-    return execvp(command.c_str(), const_cast<char **>(unix_args.data()));
+    int err = execvp(command.c_str(), const_cast<char **>(unix_args.data()));
+
+    if (err == -1) {
+      // std::cerr << "execvp failed: " << strerror(errno) << std::endl;
+      exit(-1); // Exit with an error code
+    }
+
+    return Error::NOT_FOUND;
 
   } else {
     int wstatus;
     wait(&wstatus);
 
+    // std::cout << "waited for " << child_pid << " to finish with " << wstatus
+    //           << "\n";
+
     if (WIFEXITED(wstatus) && WEXITSTATUS(wstatus) != 0) {
       return Error::NOT_FOUND;
     }
-
-    return 0;
   }
 
+  return 0;
+
 #endif
+}
+
+void CommandHandler::handleType(const std::vector<std::string> &tokens,
+                                const char *const builtin_commands[],
+                                size_t builtin_commands_size, Env &env) {
+
+  for (size_t i = 1; i < tokens.size(); i++) {
+    if (utils::contains(builtin_commands, builtin_commands_size, tokens[i])) {
+      std::cout << tokens[i] << " is a shell builtin\n";
+    } else {
+
+      auto exe_path = env.getExePathFromPATH(tokens[i]);
+
+      if (exe_path) {
+        std::cout << tokens[i] << " is " << *exe_path << "\n";
+      } else {
+        std::cout << tokens[i] << ": not found" << std::endl;
+      }
+    }
+  }
 }

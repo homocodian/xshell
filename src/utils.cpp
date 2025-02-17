@@ -3,9 +3,11 @@
 #include <string>
 #include <vector>
 
-namespace utils {
-std::string trim(const std::string &str) {
+#include "utils.h"
+
+std::string utils::trim(const std::string &str) {
   size_t start = str.find_first_not_of(" \t\n\r\f\v");
+
   if (start == std::string::npos) {
     return "";
   }
@@ -15,7 +17,8 @@ std::string trim(const std::string &str) {
   return str.substr(start, end - start + 1);
 }
 
-bool contains(const char *const str[], size_t size, const std::string &value) {
+bool utils::contains(const char *const str[], size_t size,
+                     const std::string &value) {
   for (size_t i = 0; i < size; i++) {
     if (str[i] == value) {
       return true;
@@ -24,12 +27,12 @@ bool contains(const char *const str[], size_t size, const std::string &value) {
   return false;
 }
 
-bool isNumber(const std::string &str) {
+bool utils::isNumber(const std::string &str) {
   return !str.empty() &&
          str.find_first_not_of("-0123456789") == std::string::npos;
 }
 
-std::vector<std::string> split(const std::string &str, char delimiter) {
+std::vector<std::string> utils::split(const std::string &str, char delimiter) {
   std::vector<std::string> result;
   std::istringstream stream(str);
   std::string token;
@@ -42,22 +45,18 @@ std::vector<std::string> split(const std::string &str, char delimiter) {
   return result;
 }
 
-enum OS { Windows, Unix, Unknown };
-
-enum OS getOS() {
+utils::OS utils::getOS() {
 #if defined(_WIN32) || defined(_WIN64)
-  return Windows;
+  return utils::Windows;
 #elif defined(__linux__) || defined(unix) || defined(__unix__) ||              \
     defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
-  return Unix;
+  return utils::Unix;
 #else
-  return Unknown;
+  return utils::Unknown;
 #endif
 }
 
-void terminateProcessWithMessage(const std::string &message) {
+void utils::exitWithMessage(const std::string &message) {
   std::cerr << message << std::endl;
   exit(EXIT_FAILURE);
 }
-
-} // namespace utils

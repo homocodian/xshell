@@ -1,13 +1,18 @@
+#include <array>
+#include <cstddef>
+#include <filesystem>
 #include <iostream>
+#include <string>
+#include <vector>
 
+#include "commandhdlr.h"
 #include "env.h"
-#include "rcommand.h"
 #include "utils.h"
 
-int main(int argc, const char *argv[]) {
-  const char *const commands[] = {"type", "echo", "exit"};
-  const unsigned int no_of_commands = sizeof(commands) / sizeof(commands[0]);
-  std::vector<std::string> path_dirs;
+int main() {
+  const std::array<const char *, 4> builtin_commands = {"type", "echo", "exit",
+                                                        "pwd"};
+  Env env;
 
   while (true) {
     // Flush after every std::cout / std:cerr
@@ -23,57 +28,37 @@ int main(int argc, const char *argv[]) {
     input = utils::trim(input);
 
     if (input == "exit") {
+      // command_handler.terminateChildProccess();
       exit(EXIT_SUCCESS);
     }
 
     const std::vector<std::string> tokens = utils::split(input, ' ');
     size_t tokens_size = tokens.size();
+    const std::string &command = tokens[0];
 
-    if (tokens[0] == "exit" && tokens.size() == 2 &&
-        utils::isNumber(tokens[1])) {
+    if (command == "exit" && tokens.size() == 2 && utils::isNumber(tokens[1])) {
+      // command_handler.terminateChildProccess();
       exit(std::stoi(tokens[1]));
     }
 
-    if (tokens[0] == "echo") {
+    if (command == "echo") {
       for (size_t i = 1; i < tokens_size; i++) {
         std::cout << tokens[i] << ' ';
       }
       std::cout << "\n";
     }
 
-    else if (tokens[0] == "type") {
+    else if (command == "type") {
+      CommandHandler::handleType(tokens, builtin_commands.data(),
+                                 builtin_commands.size(), env);
+    }
 
-      for (size_t i = 1; i < tokens_size; i++) {
-        bool found = false;
-        if (utils::contains(commands, no_of_commands, tokens[i])) {
-          std::cout << tokens[i] << " is a shell builtin\n";
-        } else {
-          // get and cache path dirs
-          if (path_dirs.empty()) {
-            auto dirs = Env::getDirs();
-            if (dirs) {
-              path_dirs = *dirs;
-            }
-          }
+    else if (command == "pwd") {
+      std::cout << std::filesystem::current_path().string() << "\n";
+    }
 
-          if (!path_dirs.empty()) {
-            for (auto &&dir : path_dirs) {
-              auto exe_path = Env::getExePath(dir, tokens[i]);
-
-              if (exe_path) {
-                std::cout << tokens[i] << " is " << *exe_path << "\n";
-                found = true;
-                break;
-              }
-            }
-          }
-          if (!found) {
-            std::cout << tokens[i] << ": not found" << std::endl;
-          }
-        }
-      }
-    } else {
-      int status_code = runCommand(tokens[0], tokens);
+    else {
+      int status_code = CommandHandler::run(command, tokens);
       if (status_code != 0 && !input.empty()) {
         std::cout << input << ": command not found" << std::endl;
       }

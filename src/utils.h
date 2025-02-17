@@ -1,5 +1,5 @@
-#ifndef UTILS_CPP
-#define UTILS_CPP
+#ifndef UTILS_H
+#define UTILS_H
 
 #include <iostream>
 #include <string>
@@ -16,7 +16,7 @@ std::vector<std::string> split(const std::string &str, char delimiter);
 
 bool isNumber(const std::string &str);
 
-void terminateProcessWithMessage(const std::string &message);
+void exitWithMessage(const std::string &message);
 
 enum OS getOS();
 } // namespace utils
