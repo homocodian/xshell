@@ -56,7 +56,7 @@ std::optional<std::string> Env::getExePath(const std::string &dir,
     file_path += ".exe";
 
     if (std::filesystem::exists(file_path)) {
-      return file_path
+      return file_path;
     }
 #else
     if (std::filesystem::exists(file_path)) {

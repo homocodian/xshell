@@ -60,7 +60,8 @@ utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
     if (escaped) { // Handle escaped character
       token += c;
       escaped = false;
-    } else if (c == '\\') { // Start of escape sequence
+    } else if (c == '\\' && !in_single_quotes &&
+               !in_double_quotes) { // Start of escape sequence
       escaped = true;
     } else if (c == '\'' && !in_double_quotes) {
       in_single_quotes = !in_single_quotes;
