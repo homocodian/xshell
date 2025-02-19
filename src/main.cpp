@@ -1,4 +1,3 @@
-#include <array>
 #include <cstddef>
 #include <filesystem>
 #include <iostream>
@@ -7,11 +6,13 @@
 
 #include "commandhdlr.h"
 #include "env.h"
+#include "errors.h"
 #include "utils.h"
 
 int main() {
-  const std::array<const char *, 5> builtin_commands = {"type", "echo", "exit",
-                                                        "pwd", "cd"};
+  const std::vector<const char *> builtin_commands = {"type", "echo", "exit",
+                                                      "pwd", "cd"};
+
   Env env;
 
   while (true) {
@@ -25,15 +26,26 @@ int main() {
     std::string input;
     std::getline(std::cin, input);
 
+    if (input.empty()) {
+      continue;
+    }
+
     input = utils::trim(input);
 
     if (input == "exit") {
       exit(EXIT_SUCCESS);
     }
 
-    const std::vector<std::string> tokens = utils::split(input, ' ');
+    const std::vector<std::string> tokens =
+        utils::splitPreserveQuotedContent(input, ' ');
     size_t tokens_size = tokens.size();
     const std::string &command = tokens[0];
+
+#ifdef DEBUG
+    for (auto &&i : tokens) {
+      std::cout << i << "\n";
+    }
+#endif // DEBUG
 
     if (command == "exit" && tokens.size() == 2 && utils::isNumber(tokens[1])) {
       exit(std::stoi(tokens[1]));
@@ -47,8 +59,7 @@ int main() {
     }
 
     else if (command == "type") {
-      CommandHandler::handleType(tokens, builtin_commands.data(),
-                                 builtin_commands.size(), env);
+      CommandHandler::handleType(tokens, builtin_commands, env);
     }
 
     else if (command == "pwd") {
@@ -65,7 +76,11 @@ int main() {
 
     else {
       int status_code = CommandHandler::run(command, tokens);
-      if (status_code != 0 && !input.empty()) {
+#ifdef DEBUG
+      std::cerr << "DEBUGPRINT[2]: main.cpp:78: status_code=" << status_code
+                << std::endl;
+#endif // DEBUG
+      if (status_code == Error::NOT_FOUND) {
         std::cout << input << ": command not found" << std::endl;
       }
     }

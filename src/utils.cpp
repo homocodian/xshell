@@ -45,6 +45,37 @@ std::vector<std::string> utils::split(const std::string &str, char delimiter) {
   return result;
 }
 
+std::vector<std::string>
+utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
+  std::vector<std::string> result;
+  std::string token;
+  bool inQuotes = false;
+  size_t str_size = str.size();
+
+  for (size_t i = 0; i < str_size; ++i) {
+    char c = str[i];
+
+    if (c == '\'' && !inQuotes) {
+      inQuotes = true;
+    } else if (c == '\'' && inQuotes) {
+      inQuotes = false;
+    } else if (c == delimiter && !inQuotes) {
+      if (!token.empty()) {
+        result.push_back(token);
+      }
+      token.clear();
+    } else {
+      token += c;
+    }
+  }
+
+  if (!token.empty()) {
+    result.push_back(token);
+  }
+
+  return result;
+}
+
 utils::OS utils::getOS() {
 #if defined(_WIN32) || defined(_WIN64)
   return utils::Windows;

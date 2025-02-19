@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
@@ -36,28 +37,6 @@ std::vector<std::string> &Env::getDirs() {
   }
 }
 
-bool Env::isExecutable(const std::string &path) {
-#ifdef _WIN32
-  // Windows-specific check for executability
-  DWORD file_Attr = GetFileAttributes((path + ".exe").c_str());
-
-  if (file_Attr == INVALID_FILE_ATTRIBUTES) {
-    return false; // File does not exist or other error
-  }
-
-  // Check if it's a file and if it has the executable attribute
-  return (file_Attr & FILE_ATTRIBUTE_DIRECTORY) == 0;
-#else
-  // Unix-like systems (Linux/macOS) check for executable permission
-  struct stat file_stat;
-  if (stat(path.c_str(), &file_stat) == 0) {
-    // Check if the file is executable (owner has execute permission)
-    return (file_stat.st_mode & S_IXUSR) != 0;
-  }
-  return false;
-#endif
-}
-
 std::optional<std::string> Env::getExePath(const std::string &dir,
                                            const std::string &executable) {
   std::string file_path = dir;
@@ -73,15 +52,23 @@ std::optional<std::string> Env::getExePath(const std::string &dir,
       file_path += executable;
     }
 
-    if (isExecutable(file_path)) {
+#ifdef _WIN32
+    file_path += ".exe";
+
+    if (std::filesystem::exists(file_path)) {
+      return file_path
+    }
+#else
+    if (std::filesystem::exists(file_path)) {
       return file_path;
     }
+#endif // _WIN32
   }
 
   return std::nullopt;
 }
 
-std::optional<std::string> Env::getExePathFromPATH(const std::string &exe) {
+std::optional<std::string> Env::getFilePathFromPATH(const std::string &exe) {
   std::optional<std::string> exe_path = std::nullopt;
 
   auto dirs = this->getDirs();

@@ -5,6 +5,11 @@
 #include <string>
 #include <vector>
 
+#ifdef DEBUG
+#include <cerrno>
+#include <cstring>
+#endif // DEBUG
+
 #ifdef _WIN32
 #include <direct.h>
 #include <windows.h>
@@ -117,28 +122,31 @@ int CommandHandler::run(const std::string &command,
   if (child_pid == 0) {
     std::vector<const char *> unix_args;
 
-    for (auto it = args.begin(); it != args.end(); ++it) {
-      unix_args.emplace_back(it->c_str());
+    for (auto &&it : args) {
+      unix_args.emplace_back(it.c_str());
     }
+
+    unix_args.push_back(nullptr);
 
     int err = execvp(command.c_str(), const_cast<char **>(unix_args.data()));
 
-    if (err == -1) {
-      // std::cerr << "execvp failed: " << strerror(errno) << std::endl;
-      exit(-1); // Exit with an error code
-    }
+#ifdef DEBUG
+    std::cerr << "execvp failed: " << strerror(errno) << std::endl;
+#endif // DEBUG
 
-    return Error::NOT_FOUND;
+    exit(Error::NOT_FOUND);
 
   } else {
     int wstatus;
     wait(&wstatus);
 
-    // std::cout << "waited for " << child_pid << " to finish with " << wstatus
-    //           << "\n";
+#ifdef DEBUG
+    std::cout << "waited for " << child_pid << " to finish with " << wstatus
+              << " child process status " << WIFEXITED(wstatus) << "\n";
+#endif // DEBUG
 
-    if (WIFEXITED(wstatus) && WEXITSTATUS(wstatus) != 0) {
-      return Error::NOT_FOUND;
+    if (WIFEXITED(wstatus)) {
+      return WEXITSTATUS(wstatus);
     }
   }
 
@@ -147,16 +155,17 @@ int CommandHandler::run(const std::string &command,
 #endif
 }
 
-void CommandHandler::handleType(const std::vector<std::string> &tokens,
-                                const char *const builtin_commands[],
-                                size_t builtin_commands_size, Env &env) {
+void CommandHandler::handleType(
+    const std::vector<std::string> &tokens,
+    const std::vector<const char *> &builtin_commands, Env &env) {
 
   for (size_t i = 1; i < tokens.size(); i++) {
-    if (utils::contains(builtin_commands, builtin_commands_size, tokens[i])) {
+    if (utils::contains(builtin_commands.data(), builtin_commands.size(),
+                        tokens[i])) {
       std::cout << tokens[i] << " is a shell builtin\n";
     } else {
 
-      auto exe_path = env.getExePathFromPATH(tokens[i]);
+      std::optional<std::string> exe_path = env.getFilePathFromPATH(tokens[i]);
 
       if (exe_path) {
         std::cout << tokens[i] << " is " << *exe_path << "\n";
