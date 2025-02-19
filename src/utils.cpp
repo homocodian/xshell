@@ -49,17 +49,24 @@ std::vector<std::string>
 utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
   std::vector<std::string> result;
   std::string token;
-  bool inQuotes = false;
+  bool in_single_quotes = false;
+  bool in_double_quotes = false;
+  bool escaped = false; // Flag to track escape sequences
   size_t str_size = str.size();
 
   for (size_t i = 0; i < str_size; ++i) {
     char c = str[i];
 
-    if (c == '\'' && !inQuotes) {
-      inQuotes = true;
-    } else if (c == '\'' && inQuotes) {
-      inQuotes = false;
-    } else if (c == delimiter && !inQuotes) {
+    if (escaped) { // Handle escaped character
+      token += c;
+      escaped = false;
+    } else if (c == '\\') { // Start of escape sequence
+      escaped = true;
+    } else if (c == '\'' && !in_double_quotes) {
+      in_single_quotes = !in_single_quotes;
+    } else if (c == '\"' && !in_single_quotes) {
+      in_double_quotes = !in_double_quotes;
+    } else if (c == delimiter && !in_single_quotes && !in_double_quotes) {
       if (!token.empty()) {
         result.push_back(token);
       }

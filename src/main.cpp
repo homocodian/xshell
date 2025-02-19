@@ -43,7 +43,7 @@ int main() {
 
 #ifdef DEBUG
     for (auto &&i : tokens) {
-      std::cout << i << "\n";
+      std::cout << "token : " << i << "\n";
     }
 #endif // DEBUG
 
