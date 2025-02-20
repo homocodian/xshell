@@ -57,28 +57,43 @@ utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
   for (size_t i = 0; i < str_size; ++i) {
     char c = str[i];
 
-    if (escaped) { // Handle escaped character
+    if (escaped) { // Handle the escaped character, just skip the backslash
       token += c;
       escaped = false;
+    } else if (c == '\\' && !in_single_quotes && in_double_quotes) {
+      // Only process escape sequences in double quotes
+      if (i + 1 < str_size) {
+        char next_char = str[i + 1];
+        if (next_char == '\\' || next_char == '$' || next_char == '\"' ||
+            next_char == '\n') {
+          // Skip the backslash and add the next character to the token
+          token += str[++i]; // Skip the escape character itself and add the
+                             // next character
+        } else {
+          token +=
+              c; // Just add the backslash if not followed by special characters
+        }
+      }
     } else if (c == '\\' && !in_single_quotes &&
-               !in_double_quotes) { // Start of escape sequence
+               !in_double_quotes) { // Start of escape sequence outside quotes
       escaped = true;
-    } else if (c == '\'' && !in_double_quotes) {
+    } else if (c == '\'' && !in_double_quotes) { // Toggle single quote
       in_single_quotes = !in_single_quotes;
-    } else if (c == '\"' && !in_single_quotes) {
+    } else if (c == '\"' && !in_single_quotes) { // Toggle double quote
       in_double_quotes = !in_double_quotes;
-    } else if (c == delimiter && !in_single_quotes && !in_double_quotes) {
+    } else if (c == delimiter && !in_single_quotes &&
+               !in_double_quotes) { // Split on delimiter outside quotes
       if (!token.empty()) {
         result.push_back(token);
       }
       token.clear();
     } else {
-      token += c;
+      token += c; // Add regular characters
     }
   }
 
   if (!token.empty()) {
-    result.push_back(token);
+    result.push_back(token); // Push the last token
   }
 
   return result;
