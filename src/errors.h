@@ -1,12 +1,11 @@
 #ifndef ERRORS_H
 #define ERRORS_H
 
-enum Error {
-  NO_CHILD_PROCESS = 1,
-  NOT_FOUND,
-  CREATE_JOB,
-  SET_INFO_JOB_OBJECT,
-  ASSIGN_PROCESS_TO_JOB
+#include <string>
+
+class ErrorHandler {
+public:
+  static void handleError(const std::string &message);
 };
 
 #endif // !ERRORS_H

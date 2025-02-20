@@ -6,7 +6,6 @@
 
 #include "commandhdlr.h"
 #include "env.h"
-#include "errors.h"
 #include "utils.h"
 
 int main() {
@@ -41,13 +40,18 @@ int main() {
     size_t tokens_size = tokens.size();
     const std::string &command = tokens[0];
 
-#ifdef DEBUG
-    for (auto &&i : tokens) {
-      std::cout << "token : " << i << "\n";
-    }
-#endif // DEBUG
+    // clang-format off
+    #if defined(DEBUG_TOKEN) || defined(DEBUG)
+      for (auto &&i : tokens) {
+        std::cout << "token : " << i << "\n";
+      }
+      #ifdef DEBUG_TOKEN
+        continue;
+      #endif
+    #endif
+    // clang-format on
 
-    if (command == "exit" && tokens.size() == 2 && utils::isNumber(tokens[1])) {
+    if (command == "exit" && tokens_size == 2 && utils::isNumber(tokens[1])) {
       exit(std::stoi(tokens[1]));
     }
 
@@ -75,12 +79,15 @@ int main() {
     }
 
     else {
-      int status_code = CommandHandler::run(command, tokens);
-#ifdef DEBUG
-      std::cerr << "DEBUGPRINT[2]: main.cpp:78: status_code=" << status_code
-                << std::endl;
-#endif // DEBUG
-      if (status_code == Error::NOT_FOUND) {
+      int status = CommandHandler::run(command, tokens, env);
+
+      // clang-format off
+      #ifdef DEBUG
+        std::cerr << "DEBUGPRINT[6]: main.cpp:81: status=" << status << std::endl;
+      #endif // DEBUG
+      // clang-format on
+
+      if (status == -1) {
         std::cout << input << ": command not found" << std::endl;
       }
     }

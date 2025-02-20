@@ -14,4 +14,10 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-DDEBUG)  # Define DEBUG macro in debug builds
 endif()
 
+# Add additional macro for DEBUG_TOKEN if it's passed via the script
+if(DEFINED DEBUG_TOKEN)
+    message(STATUS "DEBUG_TOKEN is defined.")
+    add_definitions(-DDEBUG_TOKEN)  # Define DEBUG_TOKEN macro if set
+endif()
+
 add_executable(shell ${SOURCE_FILES})

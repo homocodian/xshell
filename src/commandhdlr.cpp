@@ -24,29 +24,23 @@
 #include "utils.h"
 
 int CommandHandler::run(const std::string &command,
-                        const std::vector<std::string> &args) {
+                        const std::vector<std::string> &args, Env &env)
+{
+
+  std::optional<std::string> filepath = env.getFilePathFromPATH(command);
+
+  if (!filepath)
+  {
+    return -1;
+  }
 
 #ifdef _WIN32
 
-  // Buffer to store the resolved program path
-  char program_path[MAX_PATH];
-  std::string exe_command = command + ".exe";
-
-  // Search for the program in the directories listed in the PATH environment
-  // variable
-  DWORD result =
-      SearchPath(NULL, exe_command.c_str(), NULL, MAX_PATH, program_path, NULL);
-
-  if (result == 0) {
-    // std::cerr << "Program not found in PATH." << std::endl;
-    // std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
-    return Error::NOT_FOUND;
-  }
-
   HANDLE h_job = CreateJobObject(NULL, NULL);
 
-  if (h_job == NULL) {
-    return Error::CREATE_JOB;
+  if (h_job == NULL)
+  {
+    return -1;
   }
 
   // Set the job object to terminate all processes in it when the parent process
@@ -57,14 +51,16 @@ int CommandHandler::run(const std::string &command,
   job_info.BasicLimitInformation = job_limit;
 
   if (!SetInformationJobObject(h_job, JobObjectExtendedLimitInformation,
-                               &job_info, sizeof(job_info))) {
-    return Error::SET_INFO_JOB_OBJECT;
+                               &job_info, sizeof(job_info)))
+  {
+    return -1;
   }
 
   // Combine the resolved program path and arguments into a single command
   // string
-  std::string command_line = program_path;
-  for (size_t i = 1; i < args.size(); ++i) {
+  std::string command_line = *filepath;
+  for (size_t i = 1; i < args.size(); ++i)
+  {
     command_line += " " + args[i];
   }
 
@@ -79,7 +75,7 @@ int CommandHandler::run(const std::string &command,
   ZeroMemory(&pi, sizeof(pi));
 
   // Create the new process
-  if (!CreateProcess(NULL, // Application name (NULL means command line is used)
+  if (!CreateProcess(NULL,     // Application name (NULL means command line is used)
                      cmd_line, // Command line to execute
                      NULL,     // Process attributes
                      NULL,     // Thread attributes
@@ -89,13 +85,21 @@ int CommandHandler::run(const std::string &command,
                      NULL,     // Current directory
                      &si,      // Startup information
                      &pi       // Process information
-                     )) {
+                     ))
+  {
+    // clang-format off
+    #ifdef DEBUG
     // std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
-    return Error::NO_CHILD_PROCESS;
-  } else {
+    #endif
+    // clang-format on
+    return -1;
+  }
+  else
+  {
 
-    if (!AssignProcessToJobObject(h_job, pi.hProcess)) {
-      return Error::ASSIGN_PROCESS_TO_JOB;
+    if (!AssignProcessToJobObject(h_job, pi.hProcess))
+    {
+      return -1;
     }
 
     // std::cout << "Process created successfully!" << std::endl;
@@ -113,16 +117,24 @@ int CommandHandler::run(const std::string &command,
 
 #else
 
-  int child_pid = fork();
+  int pid = fork();
 
-  if (child_pid == -1) {
-    return Error::NO_CHILD_PROCESS;
+  switch (pid)
+  {
+
+  case -1:
+  {
+    ErrorHandler::handleError("Out of memory");
+    return -1;
   }
 
-  if (child_pid == 0) {
+  case 0:
+  {
+
     std::vector<const char *> unix_args;
 
-    for (auto &&it : args) {
+    for (auto &&it : args)
+    {
       unix_args.emplace_back(it.c_str());
     }
 
@@ -130,82 +142,107 @@ int CommandHandler::run(const std::string &command,
 
     int err = execvp(command.c_str(), const_cast<char **>(unix_args.data()));
 
-#ifdef DEBUG
-    std::cerr << "execvp failed: " << strerror(errno) << std::endl;
-#endif // DEBUG
+    // clang-format off
+    #ifdef DEBUG
+      std::cerr << "execvp failed: " << strerror(errno) << std::endl;
+    #endif // DEBUG
+    // clang-format on
 
-    exit(Error::NOT_FOUND);
+    ErrorHandler::handleError(
+        "[CommandHandler:run]: unreachable statement in child process");
+  }
 
-  } else {
+  default:
+  {
+
     int wstatus;
     wait(&wstatus);
 
-#ifdef DEBUG
-    std::cout << "waited for " << child_pid << " to finish with " << wstatus
-              << " child process status " << WIFEXITED(wstatus) << "\n";
-#endif // DEBUG
+    // clang-format off
+    #ifdef DEBUG
+      std::cout << "waited for " << pid << " to finish with " << wstatus
+              << " child process status " << WEXITSTATUS(wstatus) << "\n";
+    #endif // DEBUG
+    // clang-format on
 
-    if (WIFEXITED(wstatus)) {
-      return WEXITSTATUS(wstatus);
-    }
+    return WEXITSTATUS(wstatus);
   }
-
-  return 0;
+  }
+  ErrorHandler::handleError("[CommandHandler::run]: unreachable");
 
 #endif
+
+  return -1;
 }
 
 void CommandHandler::handleType(
     const std::vector<std::string> &tokens,
-    const std::vector<const char *> &builtin_commands, Env &env) {
+    const std::vector<const char *> &builtin_commands, Env &env)
+{
 
-  for (size_t i = 1; i < tokens.size(); i++) {
+  for (size_t i = 1; i < tokens.size(); i++)
+  {
     if (utils::contains(builtin_commands.data(), builtin_commands.size(),
-                        tokens[i])) {
+                        tokens[i]))
+    {
       std::cout << tokens[i] << " is a shell builtin\n";
-    } else {
+    }
+    else
+    {
 
       std::optional<std::string> exe_path = env.getFilePathFromPATH(tokens[i]);
 
-      if (exe_path) {
+      if (exe_path)
+      {
         std::cout << tokens[i] << " is " << *exe_path << "\n";
-      } else {
+      }
+      else
+      {
         std::cout << tokens[i] << ": not found" << std::endl;
       }
     }
   }
 }
 
-void CommandHandler::changeDirectory(const std::string &path) {
+void CommandHandler::changeDirectory(const std::string &path)
+{
   int status = -1;
 
 #ifdef _WIN32
 
-  if (path == "~") {
+  if (path == "~")
+  {
     const char *home_dir = std::getenv("USERPROFILE");
 
-    if (home_dir == nullptr) {
+    if (home_dir == nullptr)
+    {
       std::cerr << "cd: Unable to find home directory\n";
       return;
     }
 
     status = _chdir(home_dir);
-  } else {
+  }
+  else
+  {
     status = _chdir(path.c_str());
   }
 
 #elif defined(__unix__) || defined(__linux__) || defined(__APPLE__)
 
-  if (path == "~") {
+  if (path == "~")
+  {
     const char *home_dir = std::getenv("HOME");
 
-    if (home_dir == nullptr) {
+    if (home_dir == nullptr)
+    {
       std::cerr << "cd: Unable to find home directory\n";
       return;
     }
 
     status = chdir(home_dir);
-  } else {
+  }
+  else
+  {
     status = chdir(path.c_str());
   }
 
@@ -214,7 +251,8 @@ void CommandHandler::changeDirectory(const std::string &path) {
   exit(EXIT_FAILURE);
 #endif
 
-  if (status == -1) {
+  if (status == -1)
+  {
     std::cerr << "cd: " << path << ": "
               << "No such file or directory" << std::endl;
   }

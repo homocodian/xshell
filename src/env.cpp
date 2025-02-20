@@ -1,65 +1,85 @@
-#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
 
 #ifdef _WIN32
-#include <windows.h>
+#include <io.h>
 #else
-#include <sys/stat.h> // For stat() function and S_IXUSR macro
+#include <unistd.h>
 #endif
 
 #include "env.h"
 #include "utils.h"
 
-std::vector<std::string> &Env::getDirs() {
+std::vector<std::string> &Env::getDirs()
+{
 
-  if (!this->path_dirs.empty()) {
+  if (!this->path_dirs.empty())
+  {
     return this->path_dirs;
   }
 
   const char *path = getenv("PATH");
 
-  if (path == NULL) {
+  if (path == NULL)
+  {
     return this->path_dirs;
   }
 
   const auto os = utils::getOS();
 
-  if (os == utils::OS::Unknown) {
+  if (os == utils::OS::Unknown)
+  {
     utils::exitWithMessage("Error: Unknown OS");
   }
 
-  if (os == utils::OS::Windows) {
+  if (os == utils::OS::Windows)
+  {
     return this->path_dirs = utils::split(path, ';');
-  } else {
+  }
+  else
+  {
     return this->path_dirs = utils::split(path, ':');
   }
 }
 
 std::optional<std::string> Env::getExePath(const std::string &dir,
-                                           const std::string &executable) {
+                                           const std::string &command)
+{
   std::string file_path = dir;
   size_t slash_pos = dir.find_first_of("/\\");
 
-  if (slash_pos != std::string::npos) {
+  if (slash_pos != std::string::npos)
+  {
     const char lastChar = dir.back();
 
-    if (lastChar == '\\' || lastChar == '/') {
-      file_path += executable;
-    } else {
+    if (lastChar == '\\' || lastChar == '/')
+    {
+      file_path += command;
+    }
+    else
+    {
       file_path += dir[slash_pos];
-      file_path += executable;
+      file_path += command;
     }
 
 #ifdef _WIN32
-    file_path += ".exe";
+    // 4 is read permission
 
-    if (std::filesystem::exists(file_path)) {
-      return file_path;
+    std::string exe_file = file_path + ".exe";
+    std::string cmd_file = file_path + ".cmd";
+
+    if (_access(exe_file.c_str(), 4) == 0)
+    {
+      return exe_file;
+    }
+    else if (_access(cmd_file.c_str(), 4) == 0)
+    {
+      return cmd_file;
     }
 #else
-    if (std::filesystem::exists(file_path)) {
+    if (access(file_path.c_str(), R_OK | X_OK) == 0)
+    {
       return file_path;
     }
 #endif // _WIN32
@@ -68,14 +88,19 @@ std::optional<std::string> Env::getExePath(const std::string &dir,
   return std::nullopt;
 }
 
-std::optional<std::string> Env::getFilePathFromPATH(const std::string &exe) {
+std::optional<std::string>
+Env::getFilePathFromPATH(const std::string &command)
+{
   std::optional<std::string> exe_path = std::nullopt;
 
   auto dirs = this->getDirs();
-  for (auto &&dir : dirs) {
-    exe_path = this->getExePath(dir, exe);
 
-    if (exe_path) {
+  for (auto &&dir : dirs)
+  {
+    exe_path = this->getExePath(dir, command);
+
+    if (exe_path)
+    {
       return exe_path;
     }
   }

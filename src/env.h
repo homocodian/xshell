@@ -14,9 +14,9 @@ public:
   std::vector<std::string> &getDirs();
 
   std::optional<std::string> getExePath(const std::string &dir,
-                                        const std::string &executable);
+                                        const std::string &command);
   Env &operator=(const Env &) = delete;
 
-  std::optional<std::string> getFilePathFromPATH(const std::string &exe);
+  std::optional<std::string> getFilePathFromPATH(const std::string &command);
 };
 #endif
