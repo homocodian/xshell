@@ -1,5 +1,6 @@
 #include <iostream>
-#include <sstream>
+#include <optional>
+#include <regex>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,16 @@ bool utils::isNumber(const std::string &str) {
          str.find_first_not_of("-0123456789") == std::string::npos;
 }
 
+int safe_stoi(const std::string &str, int default_value = 1) {
+  std::istringstream iss(str);
+  int result;
+  if (iss >> result && iss.eof()) {
+    return result; // Successfully converted
+  } else {
+    return default_value; // Invalid input, return default
+  }
+}
+
 std::vector<std::string> utils::split(const std::string &str, char delimiter) {
   std::vector<std::string> result;
   std::istringstream stream(str);
@@ -45,58 +56,117 @@ std::vector<std::string> utils::split(const std::string &str, char delimiter) {
   return result;
 }
 
-std::vector<std::string>
+typedef struct Splitted_Token {
+  std::string token;
+  bool preserved;
+} Splitted_Token;
+
+// FIXME: doesn't parse '$' correctly
+std::optional<utils::Command>
 utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
-  std::vector<std::string> result;
+  std::vector<Splitted_Token> tokens;
+
   std::string token;
   bool in_single_quotes = false;
   bool in_double_quotes = false;
-  bool escaped = false; // Flag to track escape sequences
+  bool escaped = false;
   size_t str_size = str.size();
+
+  bool preversed = false;
 
   for (size_t i = 0; i < str_size; ++i) {
     char c = str[i];
 
-    if (escaped) { // Handle the escaped character, just skip the backslash
+    if (escaped) {
       token += c;
       escaped = false;
     } else if (c == '\\' && !in_single_quotes && in_double_quotes) {
-      // Only process escape sequences in double quotes
       if (i + 1 < str_size) {
         char next_char = str[i + 1];
         if (next_char == '\\' || next_char == '$' || next_char == '\"' ||
             next_char == '\n') {
-          // Skip the backslash and add the next character to the token
-          token += str[++i]; // Skip the escape character itself and add the
-                             // next character
+          token += str[++i];
         } else {
-          token +=
-              c; // Just add the backslash if not followed by special characters
+          token += c;
         }
       }
-    } else if (c == '\\' && !in_single_quotes &&
-               !in_double_quotes) { // Start of escape sequence outside quotes
+    } else if (c == '\\' && !in_single_quotes && !in_double_quotes) {
       escaped = true;
-    } else if (c == '\'' && !in_double_quotes) { // Toggle single quote
+    } else if (c == '\'' && !in_double_quotes) {
       in_single_quotes = !in_single_quotes;
-    } else if (c == '\"' && !in_single_quotes) { // Toggle double quote
+    } else if (c == '\"' && !in_single_quotes) {
       in_double_quotes = !in_double_quotes;
-    } else if (c == delimiter && !in_single_quotes &&
-               !in_double_quotes) { // Split on delimiter outside quotes
+    } else if (c == delimiter && !in_single_quotes && !in_double_quotes) {
+
       if (!token.empty()) {
-        result.push_back(token);
+        tokens.emplace_back(Splitted_Token{token, preversed});
+        preversed = false;
       }
+
       token.clear();
     } else {
-      token += c; // Add regular characters
+      token += c;
+    }
+
+    if (in_single_quotes || in_double_quotes || escaped) {
+      preversed = true;
     }
   }
 
   if (!token.empty()) {
-    result.push_back(token); // Push the last token
+    tokens.push_back(Splitted_Token{token, preversed});
   }
 
-  return result;
+  utils::Command command;
+
+  // std::regex redirect_regex(R"((\d*)(\>\>|\>\||\>)(.*?)(?=[ \"\']|$))");
+  std::regex pattern(R"(>>|&>>|>|<|>\||&>|>&)");
+  std::smatch matches;
+
+  size_t tokens_size = tokens.size();
+
+  for (int i = 0; i < tokens_size; ++i) {
+
+    if (!tokens[i].preserved &&
+        std::regex_search(tokens[i].token, matches, pattern)) {
+
+      const std::string file_descriptor = matches.prefix().str();
+      const std::string op = matches.str();
+      std::string filepath = matches.suffix().str();
+
+      if (filepath.empty()) {
+        ++i;
+
+        if (tokens_size < i) {
+          std::cerr << "file or filepath is required to redirect\n";
+          return std::nullopt;
+        }
+
+        std::smatch next_op_match;
+
+        if (!tokens[i].preserved &&
+            std::regex_search(tokens[i].token, next_op_match, pattern)) {
+          std::cerr << "syntax error near unexpected token " << "\'"
+                    << next_op_match.str() << "\'" << "\n";
+          return std::nullopt;
+        }
+
+        filepath = tokens[i].token;
+      }
+
+      command.redirects.emplace_back(
+          Redirect{.file_descriptor =
+                       file_descriptor.empty() ? 1 : safe_stoi(file_descriptor),
+                   .op = op,
+                   .filepath = filepath});
+
+      continue;
+    }
+
+    command.tokens.push_back(tokens[i].token);
+  }
+
+  return command;
 }
 
 utils::OS utils::getOS() {

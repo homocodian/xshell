@@ -1,4 +1,3 @@
-#include <cstddef>
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -11,6 +10,11 @@
 int main() {
   const std::vector<const char *> builtin_commands = {"type", "echo", "exit",
                                                       "pwd", "cd"};
+
+  if (utils::getOS() == utils::OS::Unknown) {
+    std::cerr << "Unknown plaftform, not supported\n";
+    return 1;
+  }
 
   Env env;
 
@@ -32,45 +36,55 @@ int main() {
     input = utils::trim(input);
 
     if (input == "exit") {
-      exit(EXIT_SUCCESS);
+      return 0;
     }
 
-    const std::vector<std::string> tokens =
+    const std::optional<utils::Command> command =
         utils::splitPreserveQuotedContent(input, ' ');
+
+    if (!command) {
+      continue;
+    }
+
+    const std::vector<std::string> &tokens = command->tokens;
     size_t tokens_size = tokens.size();
-    const std::string &command = tokens[0];
+
+    const std::string &exe_command = tokens[0];
 
     // clang-format off
-    #if defined(DEBUG_TOKEN) || defined(DEBUG)
+    #if  defined (DEBUG_TOKEN) || defined (DEBUG)
       for (auto &&i : tokens) {
         std::cout << "token : " << i << "\n";
       }
+
+      for (auto &&i : command->redirects) {
+        std::cout << "redirect : " << i.op << " "  << i.filepath << " " << i.file_descriptor << "\n";
+      }
+
       #ifdef DEBUG_TOKEN
         continue;
       #endif
     #endif
     // clang-format on
 
-    if (command == "exit" && tokens_size == 2 && utils::isNumber(tokens[1])) {
+    if (exe_command == "exit" && tokens_size == 2 &&
+        utils::isNumber(tokens[1])) {
       exit(std::stoi(tokens[1]));
     }
 
-    if (command == "echo") {
-      for (size_t i = 1; i < tokens_size; i++) {
-        std::cout << tokens[i] << ' ';
-      }
-      std::cout << "\n";
+    if (exe_command == "echo") {
+      CommandHandler::handleEchoCommand(*command);
     }
 
-    else if (command == "type") {
-      CommandHandler::handleType(tokens, builtin_commands, env);
+    else if (exe_command == "type") {
+      CommandHandler::handleType(*command, builtin_commands, env);
     }
 
-    else if (command == "pwd") {
+    else if (exe_command == "pwd") {
       std::cout << std::filesystem::current_path().string() << "\n";
     }
 
-    else if (command == "cd") {
+    else if (exe_command == "cd") {
       if (tokens_size > 2) {
         std::cerr << "cd: too many arguments\n";
       } else if (tokens_size == 2) {
@@ -79,7 +93,7 @@ int main() {
     }
 
     else {
-      int status = CommandHandler::run(command, tokens, env);
+      int status = CommandHandler::run(exe_command, *command, env);
 
       // clang-format off
       #ifdef DEBUG
