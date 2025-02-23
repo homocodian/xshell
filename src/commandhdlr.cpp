@@ -267,30 +267,35 @@ void CommandHandler::handleEchoCommand(command_t &command) {
   const size_t tokens_size = command.tokens.size();
   const size_t redirects_size = command.redirects.size();
 
+  bool already_written = false;
+
   if (tokens_size > 1 && redirects_size > 0) {
     for (auto it = command.redirects.rbegin(); it != command.redirects.rend();
          ++it) {
-      if (it->file_descriptor == 1) {
 
-        if (it->filepath.empty()) {
-          std::cerr << "no file or path name provided\n";
-          return;
-        }
-
-        std::ofstream file(it->filepath, it->op.contains(">>") ? std::ios::app
-                                                               : std::ios::out);
-        if (!file.is_open()) {
-          std::cerr << it->filepath << ": no such file or directory\n";
-          return;
-        }
-
-        writeTo(command.tokens, tokens_size, file);
-
+      if (it->filepath.empty()) {
+        std::cerr << "no file or path name provided\n";
         return;
+      }
+
+      std::ofstream file(it->filepath,
+                         it->op.contains(">>") ? std::ios::app : std::ios::out);
+
+      if (!file.is_open()) {
+        std::cerr << it->filepath << ": no such file or directory\n";
+        return;
+      }
+
+      if (it->file_descriptor == 1) {
+        already_written = true;
+        writeTo(command.tokens, tokens_size, file);
       }
     }
   }
-  writeTo(command.tokens, tokens_size, std::cout);
+
+  if (!already_written) {
+    writeTo(command.tokens, tokens_size, std::cout);
+  }
 }
 
 void CommandHandler::handleType(
