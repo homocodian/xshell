@@ -131,26 +131,22 @@ int CommandHandler::run(const std::string &exe_command,
     // TODO: refactor
     if (tokens_size > 1 && redirects_size > 0) {
       for (auto &&redirect : command.redirects) {
-        if (redirect.op == "&>>" || redirect.op == "&>" || ">>") {
 
-          int flags = redirect.op == "&>>" ? O_APPEND | O_CREAT | O_WRONLY
-                                           : O_WRONLY | O_CREAT | O_TRUNC;
+        bool redirect_both = redirect.op.contains("&");
 
-          int file = open(redirect.filepath.c_str(), flags, 0644);
+        int flags = redirect.op.contains(">>") ? O_APPEND | O_CREAT | O_WRONLY
+                                               : O_WRONLY | O_CREAT | O_TRUNC;
 
-          if (file == -1) {
-            std::string message =
-                redirect.filepath + ": " + strerror(errno) + "\n";
-            write(std_err_fd, message.c_str(), message.length());
-            exit(errno);
-          }
+        int file = open(redirect.filepath.c_str(), flags, 0644);
 
-          if (dup2(file, redirect.file_descriptor) == -1) {
-            std::string message = "Failed to redirect (" + redirect.op +
-                                  ") to file: " + strerror(errno) + "\n";
-            write(std_err_fd, message.c_str(), message.length());
-            exit(errno);
-          }
+        if (file == -1) {
+          std::string message =
+              redirect.filepath + ": " + strerror(errno) + "\n";
+          write(std_err_fd, message.c_str(), message.length());
+          exit(errno);
+        }
+
+        if (!redirect_both) {
 
           if (dup2(file, redirect.file_descriptor) == -1) {
             std::string message = "Failed to redirect (" + redirect.op +
@@ -158,38 +154,20 @@ int CommandHandler::run(const std::string &exe_command,
             write(std_err_fd, message.c_str(), message.length());
             exit(errno);
           }
-        } else if ((redirect.op == ">" || redirect.op == ">|") &&
-                   (redirect.file_descriptor == 1 ||
-                    redirect.file_descriptor == 2)) {
 
-          int file = open(redirect.filepath.c_str(),
-                          O_WRONLY | O_CREAT | O_TRUNC, 0644);
-
-          if (file == -1) {
-            std::string message =
-                redirect.filepath + ": " + strerror(errno) + "\n";
+        } else {
+          if (dup2(file, STDOUT_FILENO) == -1) {
+            std::string message = "Failed to redirect (" + redirect.op +
+                                  ") to file: " + strerror(errno) + "\n";
             write(std_err_fd, message.c_str(), message.length());
             exit(errno);
           }
 
-          if (redirect.file_descriptor == 1) {
-
-            if (dup2(file, STDOUT_FILENO) == -1) {
-              std::string message = "Failed to redirect (" + redirect.op +
-                                    ") to file: " + strerror(errno) + "\n";
-              write(std_err_fd, message.c_str(), message.length());
-              exit(errno);
-            }
-          }
-
-          if (redirect.file_descriptor == 2) {
-            if (dup2(file, STDERR_FILENO) == -1) {
-              std::string message = "Failed to redirect (" + redirect.op +
-                                    ") to file: " + strerror(errno) + "\n";
-              write(std_err_fd, message.c_str(), message.length());
-              ;
-              exit(errno);
-            }
+          if (dup2(file, STDERR_FILENO) == -1) {
+            std::string message = "Failed to redirect (" + redirect.op +
+                                  ") to file: " + strerror(errno) + "\n";
+            write(std_err_fd, message.c_str(), message.length());
+            exit(errno);
           }
         }
       }
