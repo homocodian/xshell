@@ -88,33 +88,33 @@ void InputHandler::readInput(std::string &input_buffer) {
         std::string_view current_word = std::string_view(
             input_buffer.data() + start_of_word, cursor_pos - start_of_word);
 
-        if (current_word.empty()) {
-          break;
-        }
+        if (!current_word.empty()) {
+          auto completion = CommandHandler::searchCommand(current_word);
 
-        auto completion = CommandHandler::searchCommand(current_word);
+          if (completion.has_value()) {
+            int delete_length = cursor_pos - start_of_word;
 
-        if (completion.has_value()) {
-          int delete_length = cursor_pos - start_of_word;
+            // Delete characters backwards
+            for (int i = 0; i < delete_length; ++i) {
+              std::cout << "\033[D\033[P";
+            }
 
-          // Delete characters backwards
-          for (int i = 0; i < delete_length; ++i) {
-            std::cout << "\033[D\033[P";
-          }
+            input_buffer.erase(start_of_word, delete_length);
+            input_buffer.insert(start_of_word, completion.value());
+            input_buffer += " ";
+            cursor_pos = start_of_word + completion.value().size() + 1;
 
-          input_buffer.erase(start_of_word, delete_length);
-          input_buffer.insert(start_of_word, completion.value());
-          input_buffer += " ";
-          cursor_pos = start_of_word + completion.value().size() + 1;
+            std::cout << input_buffer.substr(start_of_word);
 
-          std::cout << input_buffer.substr(start_of_word);
+            if (cursor_pos < input_buffer.size()) {
+              std::cout << "\033[" << input_buffer.size() - cursor_pos << "D";
+            }
 
-          if (cursor_pos < input_buffer.size()) {
-            std::cout << "\033[" << input_buffer.size() - cursor_pos << "D";
+            break;
           }
         }
       }
-
+      std::cout << "\a";
       break;
     }
     case ESC: {
