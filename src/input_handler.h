@@ -1,6 +1,7 @@
 #ifndef INPUT_HANDLER_H
 #define INPUT_HANDLER_H
 
+#include "env.h"
 #include <string>
 
 #ifdef _WIN32
@@ -13,8 +14,10 @@
 class InputHandler {
 public:
   void readInput(std::string &input_buffer);
+  InputHandler(Env *);
 
 private:
+  Env *env;
   char getKey();
   void enableRawMode();
   void disableRawMode();

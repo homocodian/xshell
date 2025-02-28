@@ -17,7 +17,7 @@ int main() {
 
   Env env;
 
-  InputHandler input_handler;
+  InputHandler input_handler(&env);
 
   while (true) {
     // Flush after every std::cout / std:cerr

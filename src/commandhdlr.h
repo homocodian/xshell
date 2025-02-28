@@ -13,8 +13,22 @@ const std::vector<std::string> builtin_commands = {"type", "echo", "exit",
                                                    "pwd", "cd"};
 
 typedef const utils::Command command_t;
+typedef const std::string completion_t;
 
-std::optional<std::string_view> searchCommand(const std::string_view &prefix);
+class Completion {
+private:
+  std::vector<std::string> completions;
+  std::string completions_of;
+
+public:
+  completion_t getCompletions(const std::string_view &prefix, Env *env);
+
+  void printLastCompletions();
+
+  std::string &getCompletionOf();
+
+  size_t getCompletionSize();
+};
 
 int run(const std::string &exe_command, command_t &command, Env &env);
 

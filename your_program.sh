@@ -17,6 +17,10 @@ if [ "$1" = "debug_token" ]; then
   shift # Shift to process any further arguments (if any)
 fi
 
+# run below if it's a first time running this locally
+# for hat trie lib
+# git submodule update --init --recursive 
+
 (
   cd "$(dirname "$0")" # Ensure compile steps are run within the repository directory
   cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake $CMAKE_DEFINITIONS
