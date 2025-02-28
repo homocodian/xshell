@@ -9,12 +9,16 @@
 
 namespace CommandHandler {
 
+const std::vector<std::string> builtin_commands = {"type", "echo", "exit",
+                                                   "pwd", "cd"};
+
 typedef const utils::Command command_t;
+
+std::optional<std::string_view> searchCommand(const std::string_view &prefix);
 
 int run(const std::string &exe_command, command_t &command, Env &env);
 
-void handleType(command_t &command,
-                const std::vector<const char *> &builtin_commands, Env &env);
+void handleType(command_t &command, Env &env);
 
 void changeDirectory(const std::string &path);
 

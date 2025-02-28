@@ -21,8 +21,6 @@ struct Command {
 
 std::string trim(const std::string &str);
 
-bool contains(const char *const str[], size_t size, const std::string &value);
-
 std::vector<std::string> split(const std::string &str, char delimiter);
 
 std::optional<Command> splitPreserveQuotedContent(const std::string &str,

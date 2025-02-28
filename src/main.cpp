@@ -5,11 +5,10 @@
 
 #include "commandhdlr.h"
 #include "env.h"
+#include "input_handler.h"
 #include "utils.h"
 
 int main() {
-  const std::vector<const char *> builtin_commands = {"type", "echo", "exit",
-                                                      "pwd", "cd"};
 
   if (utils::getOS() == utils::OS::Unknown) {
     std::cerr << "Unknown plaftform, not supported\n";
@@ -18,16 +17,18 @@ int main() {
 
   Env env;
 
+  InputHandler input_handler;
+
   while (true) {
     // Flush after every std::cout / std:cerr
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
-    // Uncomment this block to pass the first stage
     std::cout << "$ ";
 
     std::string input;
-    std::getline(std::cin, input);
+
+    input_handler.readInput(input);
 
     if (input.empty()) {
       continue;
@@ -69,7 +70,7 @@ int main() {
 
     if (exe_command == "exit" && tokens_size == 2 &&
         utils::isNumber(tokens[1])) {
-      exit(std::stoi(tokens[1]));
+      return std::stoi(tokens[1]);
     }
 
     if (exe_command == "echo") {
@@ -77,7 +78,7 @@ int main() {
     }
 
     else if (exe_command == "type") {
-      CommandHandler::handleType(*command, builtin_commands, env);
+      CommandHandler::handleType(*command, env);
     }
 
     else if (exe_command == "pwd") {

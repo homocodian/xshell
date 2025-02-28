@@ -18,16 +18,6 @@ std::string utils::trim(const std::string &str) {
   return str.substr(start, end - start + 1);
 }
 
-bool utils::contains(const char *const str[], size_t size,
-                     const std::string &value) {
-  for (size_t i = 0; i < size; i++) {
-    if (str[i] == value) {
-      return true;
-    }
-  }
-  return false;
-}
-
 bool utils::isNumber(const std::string &str) {
   return !str.empty() &&
          str.find_first_not_of("-0123456789") == std::string::npos;
