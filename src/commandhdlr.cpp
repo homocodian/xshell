@@ -2,6 +2,8 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <string>
+#include <tuple>
 #include <vector>
 
 #ifdef _WIN32
@@ -349,16 +351,30 @@ CommandHandler::Completion::getCompletions(const std::string_view &prefix,
                                            Env *env) {
 
   completions.clear();
-
-  size_t best_match_length = 0;
-
   completions_of = prefix;
 
   auto &command_trie = env->getCommandTrie();
   auto prefix_range = command_trie.equal_prefix_range(prefix);
 
+  std::tuple<bool, int> min_element_tuple = {false, -1};
+
+  bool is_all_elements_same_length = true;
+
   for (auto it = prefix_range.first; it != prefix_range.second; ++it) {
-    completions.emplace_back(it.key());
+    const auto &current_element = it.key();
+
+    if (!completions.empty() &&
+        current_element.size() != completions.back().size()) {
+      is_all_elements_same_length = false;
+    }
+
+    completions.emplace_back(current_element);
+
+    if (!std::get<0>(min_element_tuple) ||
+        (current_element.size() <
+         completions[std::get<1>(min_element_tuple)].size())) {
+      min_element_tuple = {true, completions.size() - 1};
+    }
   }
 
   if (completions.empty()) {
@@ -369,7 +385,11 @@ CommandHandler::Completion::getCompletions(const std::string_view &prefix,
     return completions[0] + " ";
   }
 
-  return *std::min_element(completions.begin(), completions.end());
+  if (is_all_elements_same_length) {
+    return "";
+  }
+
+  return completions[std::get<1>(min_element_tuple)];
 }
 
 void CommandHandler::Completion::printLastCompletions() {
