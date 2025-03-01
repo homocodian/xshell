@@ -385,6 +385,8 @@ CommandHandler::Completion::getCompletions(const std::string_view &prefix,
     return completions[0] + " ";
   }
 
+  std::sort(completions.begin(), completions.end());
+
   if (is_all_elements_same_length) {
     return "";
   }
@@ -393,6 +395,7 @@ CommandHandler::Completion::getCompletions(const std::string_view &prefix,
 }
 
 void CommandHandler::Completion::printLastCompletions() {
+
   std::cout << std::endl;
 
   char size = completions.size();
