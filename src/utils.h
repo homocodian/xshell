@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #include <optional>
 #include <string>
@@ -19,18 +18,15 @@ struct Command {
   std::vector<Redirect> redirects;
 };
 
-std::string trim(const std::string &str);
+std::string trim(const std::string& str);
 
-std::vector<std::string> split(const std::string &str, char delimiter);
+std::vector<std::string> split(std::string_view str, char delimiter);
 
-std::optional<Command> splitPreserveQuotedContent(const std::string &str,
+std::optional<Command> splitPreserveQuotedContent(const std::string& str,
                                                   char delimiter);
 
-bool isNumber(const std::string &str);
+bool isNumber(const std::string& str);
 
-void exitWithMessage(const std::string &message);
+void exitWithMessage(const std::string& message);
 
-enum OS getOS();
-} // namespace utils
-
-#endif
+}  // namespace utils

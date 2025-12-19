@@ -9,14 +9,5 @@
 # Exit early if any commands fail
 set -e
 
-git submodule update --init --recursive
-
-if [ $? -eq 0 ]; then
-  echo "Git submodules updated successfully."
-else
-  echo "Error updating Git submodules."
-  exit 1 # Exit with an error code
-fi
-
-cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake
+cmake -B build -S .
 cmake --build ./build

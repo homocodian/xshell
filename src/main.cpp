@@ -4,17 +4,12 @@
 #include <vector>
 
 #include "commandhdlr.h"
+#include "debug_utils.h"
 #include "env.h"
 #include "input_handler.h"
 #include "utils.h"
 
 int main() {
-
-  if (utils::getOS() == utils::OS::Unknown) {
-    std::cerr << "Unknown plaftform, not supported\n";
-    return 1;
-  }
-
   Env env;
 
   InputHandler input_handler(&env);
@@ -24,15 +19,11 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
-    std::cout << "$ ";
+    std::cout << "$ ";  // Print prompt
 
     std::string input;
-
     input_handler.readInput(input);
-
-    if (input.empty()) {
-      continue;
-    }
+    if (input.empty()) continue;
 
     input = utils::trim(input);
 
@@ -47,26 +38,25 @@ int main() {
       continue;
     }
 
-    const std::vector<std::string> &tokens = command->tokens;
+    const std::vector<std::string>& tokens = command->tokens;
     size_t tokens_size = tokens.size();
 
-    const std::string &exe_command = tokens[0];
+    const std::string& exe_command = tokens[0];
+
+    DBG_EXEC(
+        for (auto&& i : tokens) { std::cout << "token : " << i << "\n"; }
+
+        for (auto&& i : command->redirects) {
+          std::cout << "redirect : " << i.op << " " << i.filepath << " "
+                    << i.file_descriptor << "\n";
+        }
 
     // clang-format off
-    #if  defined (DEBUG_TOKEN) || defined (DEBUG)
-      for (auto &&i : tokens) {
-        std::cout << "token : " << i << "\n";
-      }
-
-      for (auto &&i : command->redirects) {
-        std::cout << "redirect : " << i.op << " "  << i.filepath << " " << i.file_descriptor << "\n";
-      }
-
-      #ifdef DEBUG_TOKEN
-        continue;
-      #endif
-    #endif
-    // clang-format on
+        #ifdef DEBUG_TOKEN
+          DBG_EXIT(1);
+        #endif
+        // clang-format on
+    );
 
     if (exe_command == "exit" && tokens_size == 2 &&
         utils::isNumber(tokens[1])) {
@@ -96,11 +86,7 @@ int main() {
     else {
       int status = CommandHandler::run(exe_command, *command, env);
 
-      // clang-format off
-      #ifdef DEBUG
-        std::cerr << "DEBUGPRINT[6]: main.cpp:81: status=" << status << std::endl;
-      #endif // DEBUG
-      // clang-format on
+      DBG_PRINT("Command exited with status: {}", status);
 
       if (status == -1) {
         std::cout << input << ": command not found" << std::endl;

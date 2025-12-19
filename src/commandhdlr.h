@@ -1,5 +1,4 @@
-#ifndef COMMANDHDLR_H
-#define COMMANDHDLR_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -13,30 +12,27 @@ const std::vector<std::string> builtin_commands = {"type", "echo", "exit",
                                                    "pwd", "cd"};
 
 typedef const utils::Command command_t;
-typedef const std::string completion_t;
 
 class Completion {
-private:
+ private:
   std::vector<std::string> completions;
   std::string completions_of;
 
-public:
-  completion_t getCompletions(const std::string_view &prefix, Env *env);
+ public:
+  std::string getCompletion(std::string_view prefix, Env* env);
 
-  void printLastCompletions();
+  void printLastCompletions() const noexcept;
 
-  std::string &getCompletionOf();
+  const std::string& getCompletionOf() const noexcept;
 
-  size_t getCompletionSize();
+  size_t getCompletionSize() const noexcept;
 };
 
-int run(const std::string &exe_command, command_t &command, Env &env);
+int run(const std::string& exe_command, command_t& command, Env& env);
 
-void handleType(command_t &command, Env &env);
+void handleType(const command_t& command, Env& env);
 
-void changeDirectory(const std::string &path);
+void changeDirectory(const std::string& path);
 
-void handleEchoCommand(command_t &command);
-}; // namespace CommandHandler
-
-#endif
+void handleEchoCommand(command_t& command);
+};  // namespace CommandHandler

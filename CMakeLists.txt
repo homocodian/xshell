@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.13...4.0)
 
 project(shell-starter-cpp)
 
@@ -20,10 +20,4 @@ if(DEFINED DEBUG_TOKEN)
     add_definitions(-DDEBUG_TOKEN)  # Define DEBUG_TOKEN macro if set
 endif()
 
-add_subdirectory(external/hat-trie)
-
 add_executable(shell ${SOURCE_FILES})
-
-target_link_libraries(shell tsl_hat_trie)
-
-target_include_directories(shell PRIVATE tsl::hat-trie)

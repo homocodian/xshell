@@ -1,48 +1,43 @@
+#include "utils.h"
+
+#include <charconv>
 #include <iostream>
 #include <optional>
 #include <regex>
 #include <string>
 #include <vector>
 
-#include "utils.h"
-
-std::string utils::trim(const std::string &str) {
+std::string utils::trim(const std::string& str) {
   size_t start = str.find_first_not_of(" \t\n\r\f\v");
-
-  if (start == std::string::npos) {
-    return "";
-  }
-
+  if (start == std::string::npos) return "";
   size_t end = str.find_last_not_of(" \t\n\r\f\v");
 
   return str.substr(start, end - start + 1);
 }
 
-bool utils::isNumber(const std::string &str) {
+bool utils::isNumber(const std::string& str) {
   return !str.empty() &&
          str.find_first_not_of("-0123456789") == std::string::npos;
 }
 
-int safe_stoi(const std::string &str, int default_value = 1) {
-  std::istringstream iss(str);
-  int result;
-  if (iss >> result && iss.eof()) {
-    return result; // Successfully converted
-  } else {
-    return default_value; // Invalid input, return default
+int safe_stoi(const std::string& str, int default_value = 1) {
+  int result = 0;
+  auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), result);
+  if (ec == std::errc() && ptr == str.data() + str.size()) {
+    return result;
   }
+  return default_value;
 }
 
-std::vector<std::string> utils::split(const std::string &str, char delimiter) {
+std::vector<std::string> utils::split(std::string_view str, char delimiter) {
   std::vector<std::string> result;
-  std::istringstream stream(str);
-  std::string token;
+  size_t start = 0, end;
 
-  // Use getline to read each token separated by the delimiter
-  while (std::getline(stream, token, delimiter)) {
-    result.push_back(token);
+  while ((end = str.find(delimiter, start)) != std::string_view::npos) {
+    result.emplace_back(str.substr(start, end - start));
+    start = end + 1;
   }
-
+  result.emplace_back(str.substr(start));
   return result;
 }
 
@@ -52,8 +47,8 @@ typedef struct Splitted_Token {
 } Splitted_Token;
 
 // FIXME: doesn't parse '$' correctly
-std::optional<utils::Command>
-utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
+std::optional<utils::Command> utils::splitPreserveQuotedContent(
+    const std::string& str, char delimiter) {
   std::vector<Splitted_Token> tokens;
 
   std::string token;
@@ -87,7 +82,6 @@ utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
     } else if (c == '\"' && !in_single_quotes) {
       in_double_quotes = !in_double_quotes;
     } else if (c == delimiter && !in_single_quotes && !in_double_quotes) {
-
       if (!token.empty()) {
         tokens.emplace_back(Splitted_Token{token, preversed});
         preversed = false;
@@ -116,10 +110,8 @@ utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
   size_t tokens_size = tokens.size();
 
   for (int i = 0; i < tokens_size; ++i) {
-
     if (!tokens[i].preserved &&
         std::regex_search(tokens[i].token, matches, pattern)) {
-
       const std::string file_descriptor = matches.prefix().str();
       const std::string op = matches.str();
       std::string filepath = matches.suffix().str();
@@ -159,18 +151,7 @@ utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
   return command;
 }
 
-utils::OS utils::getOS() {
-#if defined(_WIN32) || defined(_WIN64)
-  return utils::Windows;
-#elif defined(__linux__) || defined(unix) || defined(__unix__) ||              \
-    defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
-  return utils::Unix;
-#else
-  return utils::Unknown;
-#endif
-}
-
-void utils::exitWithMessage(const std::string &message) {
+void utils::exitWithMessage(const std::string& message) {
   std::cerr << message << std::endl;
   exit(EXIT_FAILURE);
 }

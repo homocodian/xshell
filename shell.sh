@@ -1,30 +1,97 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-set -e # Exit early if any commands fail
+set -e
 
-# Initialize the CMake definitions
+if [[ -t 1 ]]; then
+  RED='\033[31m'
+  GREEN='\033[32m'
+  YELLOW='\033[33m'
+  BLUE='\033[34m'
+  RESET='\033[0m'
+else
+  RED=''
+  GREEN=''
+  YELLOW=''
+  BLUE=''
+  RESET=''
+fi
+
 CMAKE_DEFINITIONS=""
+CMAKE_FLAGS=""
+BUILD_TYPE_SET=false
+SHOULD_RUN=true
+SHOULD_CLEAN=false
+SHOULD_CLEAN_ONLY=false
 
-# Process arguments
-if [ "$1" = "debug" ]; then
-  CMAKE_DEFINITIONS="-DCMAKE_BUILD_TYPE=Debug"
-  shift # Shift to process the next argument
+for arg in "$@"; do
+  case "$arg" in
+    --force)
+      CMAKE_FLAGS+=" --fresh"
+      ;;
+
+    --debug)
+      $BUILD_TYPE_SET && {
+        echo "Error: multiple build types specified" >&2
+        exit 1
+      }
+      BUILD_TYPE_SET=true
+      CMAKE_DEFINITIONS+=" -DCMAKE_BUILD_TYPE=Debug"
+      ;;
+
+    --release)
+      $BUILD_TYPE_SET && {
+        echo "Error: multiple build types specified" >&2
+        exit 1
+      }
+      BUILD_TYPE_SET=true
+      CMAKE_DEFINITIONS+=" -DCMAKE_BUILD_TYPE=Release"
+      ;;
+
+    --debug-token)
+      CMAKE_DEFINITIONS+=" -DDEBUG_TOKEN=ON"
+      ;;
+
+      --build)
+      SHOULD_RUN=false
+      ;;
+
+    --clean)
+      $SHOULD_CLEAN_ONLY && {
+        echo "Error: --clean and --clean-only cannot be used together" >&2
+        exit 1
+      }
+      SHOULD_CLEAN=true
+      ;;
+
+    --clean-only)
+      $SHOULD_CLEAN && {
+        echo "Error: --clean and --clean-only cannot be used together" >&2
+        exit 1
+      }
+      SHOULD_CLEAN_ONLY=true
+      ;;
+  esac
+done
+
+if [ "$SHOULD_CLEAN_ONLY" = true ]; then
+  echo -e "${RED}Cleaning build directory...${RESET}"
+  rm -rf "$(dirname "$0")/build"
+  exit 0
 fi
 
-# If "debug_token" argument is passed, add the DEBUG_TOKEN macro
-if [ "$1" = "debug_token" ]; then
-  CMAKE_DEFINITIONS="$CMAKE_DEFINITIONS -DDEBUG_TOKEN=ON"
-  shift # Shift to process any further arguments (if any)
+if [ "$SHOULD_CLEAN" = true ]; then
+  echo -e "${RED}Cleaning build directory...${RESET}"
+  rm -rf "$(dirname "$0")/build"
 fi
-
-# run below if it's a first time running this locally
-# for hat trie lib
-# git submodule update --init --recursive 
 
 (
-  cd "$(dirname "$0")" # Ensure compile steps are run within the repository directory
-  cmake -B build -S . -DCMAKE_TOOLCHAIN_FILE=${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake $CMAKE_DEFINITIONS
-  cmake --build ./build
+  cd "$(dirname "$0")"
+  echo -e "${YELLOW}Configuring and building project...${RESET}"
+  cmake $CMAKE_FLAGS -S . -B build $CMAKE_DEFINITIONS
+  cmake --build build
 )
 
-exec ./build/shell "$@"
+if [ "$SHOULD_RUN" = true ]; then
+  echo -e "${GREEN}Running shell executable...${RESET}"
+  exec ./build/shell
+fi

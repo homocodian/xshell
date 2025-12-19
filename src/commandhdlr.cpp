@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -10,20 +11,20 @@
 #include <direct.h>
 #include <windows.h>
 #else
-#include <cerrno>
 #include <fcntl.h>
 #include <unistd.h>
 #include <wait.h>
-#endif // _WIN32
+
+#include <cerrno>
+#endif  // _WIN32
 
 #include "commandhdlr.h"
 #include "env.h"
 #include "errors.h"
 #include "utils.h"
 
-int CommandHandler::run(const std::string &exe_command,
-                        CommandHandler::command_t &command, Env &env) {
-
+int CommandHandler::run(const std::string& exe_command,
+                        CommandHandler::command_t& command, Env& env) {
   std::optional<std::string> filepath = env.getFilePathFromPATH(exe_command);
 
   if (!filepath) {
@@ -69,33 +70,26 @@ int CommandHandler::run(const std::string &exe_command,
   ZeroMemory(&pi, sizeof(pi));
 
   // Create the new process
-  if (!CreateProcess(NULL, // Application name (NULL means command line is used)
-                     cmd_line, // Command line to execute
-                     NULL,     // Process attributes
-                     NULL,     // Thread attributes
-                     FALSE,    // Inherit handles
-                     0,        // Creation flags
-                     NULL,     // Environment variables
-                     NULL,     // Current directory
-                     &si,      // Startup information
-                     &pi       // Process information
-                     )) {
-    // clang-format off
-    #ifdef DEBUG
-    // std::cerr << "CreateProcess failed: " << GetLastError() << std::endl;
-    #endif
-    // clang-format on
+  if (!CreateProcess(
+          NULL,      // Application name (NULL means command line is used)
+          cmd_line,  // Command line to execute
+          NULL,      // Process attributes
+          NULL,      // Thread attributes
+          FALSE,     // Inherit handles
+          0,         // Creation flags
+          NULL,      // Environment variables
+          NULL,      // Current directory
+          &si,       // Startup information
+          &pi        // Process information
+          )) {
     return -1;
   } else {
-
     if (!AssignProcessToJobObject(h_job, pi.hProcess)) {
       return -1;
     }
 
-    // std::cout << "Process created successfully!" << std::endl;
     // Wait for the process to finish
     WaitForSingleObject(pi.hProcess, INFINITE);
-    // std::cout << "Child process completed!" << std::endl;
 
     // Close the handles
     CloseHandle(pi.hProcess);
@@ -110,117 +104,113 @@ int CommandHandler::run(const std::string &exe_command,
   int pid = fork();
 
   switch (pid) {
-
-  case -1: {
-    ErrorHandler::handleError("Out of memory");
-    break;
-  }
-
-  case 0: {
-
-    size_t tokens_size = command.tokens.size();
-    size_t redirects_size = command.redirects.size();
-
-    bool error = false;
-    std::string error_message;
-
-    int std_err_fd = dup(STDERR_FILENO);
-
-    if (std_err_fd == -1) {
-      std::cerr << "Failed to duplicate a STDERR_FILENO in child process\n";
-      exit(errno);
+    case -1: {
+      ErrorHandler::handleError("Out of memory");
+      break;
     }
 
-    // TODO: refactor
-    if (tokens_size > 1 && redirects_size > 0) {
-      for (auto &&redirect : command.redirects) {
+    case 0: {
+      size_t tokens_size = command.tokens.size();
+      size_t redirects_size = command.redirects.size();
 
-        bool redirect_both = redirect.op.contains("&");
+      bool error = false;
+      std::string error_message;
 
-        int flags = redirect.op.contains(">>") ? O_APPEND | O_CREAT | O_WRONLY
-                                               : O_WRONLY | O_CREAT | O_TRUNC;
+      int std_err_fd = dup(STDERR_FILENO);
 
-        int file = open(redirect.filepath.c_str(), flags, 0644);
+      if (std_err_fd == -1) {
+        std::cerr << "Failed to duplicate a STDERR_FILENO in child process\n";
+        exit(errno);
+      }
 
-        if (file == -1) {
-          std::string message =
-              redirect.filepath + ": " + strerror(errno) + "\n";
-          write(std_err_fd, message.c_str(), message.length());
-          exit(errno);
-        }
+      // TODO: refactor
+      if (tokens_size > 1 && redirects_size > 0) {
+        for (auto&& redirect : command.redirects) {
+          bool redirect_both = redirect.op.contains("&");
 
-        if (!redirect_both) {
+          int flags = redirect.op.contains(">>") ? O_APPEND | O_CREAT | O_WRONLY
+                                                 : O_WRONLY | O_CREAT | O_TRUNC;
 
-          if (dup2(file, redirect.file_descriptor) == -1) {
-            std::string message = "Failed to redirect (" + redirect.op +
-                                  ") to file: " + strerror(errno) + "\n";
+          int file = open(redirect.filepath.c_str(), flags, 0644);
+
+          if (file == -1) {
+            std::string message =
+                redirect.filepath + ": " + strerror(errno) + "\n";
             write(std_err_fd, message.c_str(), message.length());
             exit(errno);
           }
-        } else {
-          if (dup2(file, STDOUT_FILENO) == -1) {
-            std::string message = "Failed to redirect (" + redirect.op +
-                                  ") to file: " + strerror(errno) + "\n";
-            write(std_err_fd, message.c_str(), message.length());
-            exit(errno);
-          }
 
-          if (dup2(file, STDERR_FILENO) == -1) {
-            std::string message = "Failed to redirect (" + redirect.op +
-                                  ") to file: " + strerror(errno) + "\n";
-            write(std_err_fd, message.c_str(), message.length());
-            exit(errno);
+          if (!redirect_both) {
+            if (dup2(file, redirect.file_descriptor) == -1) {
+              std::string message = "Failed to redirect (" + redirect.op +
+                                    ") to file: " + strerror(errno) + "\n";
+              write(std_err_fd, message.c_str(), message.length());
+              exit(errno);
+            }
+          } else {
+            if (dup2(file, STDOUT_FILENO) == -1) {
+              std::string message = "Failed to redirect (" + redirect.op +
+                                    ") to file: " + strerror(errno) + "\n";
+              write(std_err_fd, message.c_str(), message.length());
+              exit(errno);
+            }
+
+            if (dup2(file, STDERR_FILENO) == -1) {
+              std::string message = "Failed to redirect (" + redirect.op +
+                                    ") to file: " + strerror(errno) + "\n";
+              write(std_err_fd, message.c_str(), message.length());
+              exit(errno);
+            }
           }
         }
       }
-    }
 
-    std::vector<const char *> unix_args;
+      std::vector<const char*> unix_args;
 
-    unix_args.reserve(tokens_size + 1);
+      unix_args.reserve(tokens_size + 1);
 
-    for (int i = 0; i < tokens_size; ++i) {
-      unix_args.emplace_back(command.tokens[i].c_str());
-    }
+      for (int i = 0; i < tokens_size; ++i) {
+        unix_args.emplace_back(command.tokens[i].c_str());
+      }
 
-    unix_args[tokens_size] = nullptr;
+      unix_args[tokens_size] = nullptr;
 
 #ifdef DEBUG
-    for (size_t i = 0; i <= tokens_size; ++i) {
-      if (unix_args[i] == nullptr) {
-        std::cout << "nullptr" << "\n";
-      } else {
-        std::cout << unix_args[i] << "\n";
+      for (size_t i = 0; i <= tokens_size; ++i) {
+        if (unix_args[i] == nullptr) {
+          std::cout << "nullptr" << "\n";
+        } else {
+          std::cout << unix_args[i] << "\n";
+        }
       }
-    }
-#endif // DEBUG
+#endif  // DEBUG
 
-    int err =
-        execvp(exe_command.c_str(), const_cast<char **>(unix_args.data()));
+      int err =
+          execvp(exe_command.c_str(), const_cast<char**>(unix_args.data()));
 
-    // clang-format off
+      // clang-format off
     #ifdef DEBUG
       std::cerr << "execvp failed: " << strerror(errno) << std::endl;
     #endif // DEBUG
-    // clang-format on
-    ErrorHandler::handleError("[CommandHandler::run:226]: command not found: "
-                              "unreachable in child process");
-  }
+      // clang-format on
+      ErrorHandler::handleError(
+          "[CommandHandler::run:226]: command not found: "
+          "unreachable in child process");
+    }
 
-  default: {
+    default: {
+      int wstatus;
+      wait(&wstatus);
 
-    int wstatus;
-    wait(&wstatus);
-
-    // clang-format off
+      // clang-format off
     #ifdef DEBUG
       std::cout << "waited for " << pid << " to finish with " << wstatus
               << " child process status " << WEXITSTATUS(wstatus) << "\n";
     #endif // DEBUG
-    // clang-format on
+      // clang-format on
 
-    return WEXITSTATUS(wstatus);
-  }
+      return WEXITSTATUS(wstatus);
+    }
   }
   ErrorHandler::handleError("[CommandHandler::run:227]: unreachable");
 
@@ -229,8 +219,8 @@ int CommandHandler::run(const std::string &exe_command,
   return -1;
 }
 
-void writeTo(const std::vector<std::string> &tokens, size_t tokens_size,
-             auto &to) {
+void writeTo(const std::vector<std::string>& tokens, size_t tokens_size,
+             auto& to) {
   int index = tokens_size - 1;
 
   int i = 1;
@@ -242,8 +232,7 @@ void writeTo(const std::vector<std::string> &tokens, size_t tokens_size,
   to << tokens[i] << "\n";
 }
 
-void CommandHandler::handleEchoCommand(command_t &command) {
-
+void CommandHandler::handleEchoCommand(command_t& command) {
   const size_t tokens_size = command.tokens.size();
   const size_t redirects_size = command.redirects.size();
 
@@ -252,7 +241,6 @@ void CommandHandler::handleEchoCommand(command_t &command) {
   if (tokens_size > 1 && redirects_size > 0) {
     for (auto it = command.redirects.rbegin(); it != command.redirects.rend();
          ++it) {
-
       if (it->filepath.empty()) {
         std::cerr << "no file or path name provided\n";
         return;
@@ -278,18 +266,15 @@ void CommandHandler::handleEchoCommand(command_t &command) {
   }
 }
 
-void CommandHandler::handleType(const utils::Command &command, Env &env) {
-
+void CommandHandler::handleType(const command_t& command, Env& env) {
   const size_t tokens_size = command.tokens.size();
 
   for (size_t i = 1; i < tokens_size; ++i) {
     if (std::find(CommandHandler::builtin_commands.begin(),
                   CommandHandler::builtin_commands.end(), command.tokens[i]) !=
         CommandHandler::builtin_commands.end()) {
-
       std::cout << command.tokens[i] << " is a shell builtin\n";
     } else {
-
       std::optional<std::string> exe_path =
           env.getFilePathFromPATH(command.tokens[i]);
 
@@ -302,13 +287,13 @@ void CommandHandler::handleType(const utils::Command &command, Env &env) {
   }
 }
 
-void CommandHandler::changeDirectory(const std::string &path) {
+void CommandHandler::changeDirectory(const std::string& path) {
   int status = -1;
 
 #ifdef _WIN32
 
   if (path == "~") {
-    const char *home_dir = std::getenv("USERPROFILE");
+    const char* home_dir = std::getenv("USERPROFILE");
 
     if (home_dir == nullptr) {
       std::cerr << "cd: Unable to find home directory\n";
@@ -323,7 +308,7 @@ void CommandHandler::changeDirectory(const std::string &path) {
 #elif defined(__unix__) || defined(__linux__) || defined(__APPLE__)
 
   if (path == "~") {
-    const char *home_dir = std::getenv("HOME");
+    const char* home_dir = std::getenv("HOME");
 
     if (home_dir == nullptr) {
       std::cerr << "cd: Unable to find home directory\n";
@@ -346,61 +331,77 @@ void CommandHandler::changeDirectory(const std::string &path) {
   }
 }
 
-CommandHandler::completion_t
-CommandHandler::Completion::getCompletions(const std::string_view &prefix,
-                                           Env *env) {
-
+std::string CommandHandler::Completion::getCompletion(std::string_view prefix,
+                                                      Env* env) {
   completions.clear();
   completions_of = prefix;
 
-  auto &command_trie = env->getCommandTrie();
-  auto prefix_range = command_trie.equal_prefix_range(prefix);
+  if (prefix.empty()) return {};
 
   bool is_all_elements_same_length = true;
+  bool found_in_builtin = false;
 
-  for (auto it = prefix_range.first; it != prefix_range.second; ++it) {
-    const auto &current_element = it.key();
+  auto try_add = [&](const std::string& str) -> void {
+    if (!str.starts_with(prefix)) return;
 
-    if (!completions.empty() &&
-        current_element.size() != completions.back().size()) {
+    if (!completions.empty() && str.size() != completions.back().size()) {
       is_all_elements_same_length = false;
     }
 
-    completions.emplace_back(current_element);
+    completions.emplace_back(str);
+  };
+
+  for (const auto& builtin_cmd : CommandHandler::builtin_commands) {
+    try_add(builtin_cmd);
   }
 
   if (completions.empty()) {
-    return "";
+    auto& dirs = env->getDirs();
+
+    for (const auto& dir : dirs) {
+      std::error_code ec;
+      const std::filesystem::directory_iterator dir_iter(dir, ec);
+      if (ec) continue;  // Skip this directory entirely
+
+      for (const auto& dir_entry : dir_iter) {
+        if (!dir_entry.is_regular_file()) continue;
+        try_add(dir_entry.path().filename().string());
+      }
+    }
   }
 
-  if (completions.size() == 1) {
-    return completions[0] + " ";
-  }
+  if (completions.empty()) return "";
+  if (completions.size() == 1) return completions.front() + " ";
 
   std::sort(completions.begin(), completions.end());
 
-  if (is_all_elements_same_length) {
-    return "";
+  if (is_all_elements_same_length) return "";
+
+  // longest common prefix
+  const auto& first = completions.front();
+  const auto& last = completions.back();
+
+  size_t i = prefix.size();
+  const size_t max = std::min(first.size(), last.size());
+  while (i < max && first[i] == last[i]) {
+    ++i;
   }
 
-  return *std::min_element(completions.begin(), completions.end());
+  return first.substr(0, i);
 }
 
-void CommandHandler::Completion::printLastCompletions() {
-
-  std::cout << std::endl;
-
-  char size = completions.size();
-
-  for (char i = 0; i < size; ++i) {
+void CommandHandler::Completion::printLastCompletions() const noexcept {
+  std::cout << "\n";
+  for (size_t i = 0; i < completions.size(); ++i) {
     std::cout << completions[i] << "  ";
   }
 }
 
-std::string &CommandHandler::Completion::getCompletionOf() {
+const std::string& CommandHandler::Completion::getCompletionOf()
+    const noexcept {
   return completions_of;
 }
 
-size_t CommandHandler::Completion::getCompletionSize() {
+size_t CommandHandler::Completion::getCompletionSize() const noexcept {
   return completions.size();
 }
