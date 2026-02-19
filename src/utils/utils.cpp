@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "utils/utils.hpp"
 
 #include <charconv>
 #include <iostream>
@@ -7,20 +7,21 @@
 #include <string>
 #include <vector>
 
-std::string utils::trim(const std::string& str) {
+std::string utils::trim(const std::string &str) {
   size_t start = str.find_first_not_of(" \t\n\r\f\v");
-  if (start == std::string::npos) return "";
+  if (start == std::string::npos)
+    return "";
   size_t end = str.find_last_not_of(" \t\n\r\f\v");
 
   return str.substr(start, end - start + 1);
 }
 
-bool utils::isNumber(const std::string& str) {
+bool utils::isNumber(const std::string &str) {
   return !str.empty() &&
          str.find_first_not_of("-0123456789") == std::string::npos;
 }
 
-int safe_stoi(const std::string& str, int default_value = 1) {
+int safe_stoi(const std::string &str, int default_value = 1) {
   int result = 0;
   auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), result);
   if (ec == std::errc() && ptr == str.data() + str.size()) {
@@ -47,8 +48,8 @@ typedef struct Splitted_Token {
 } Splitted_Token;
 
 // FIXME: doesn't parse '$' correctly
-std::optional<utils::Command> utils::splitPreserveQuotedContent(
-    const std::string& str, char delimiter) {
+std::optional<utils::Command>
+utils::splitPreserveQuotedContent(const std::string &str, char delimiter) {
   std::vector<Splitted_Token> tokens;
 
   std::string token;
@@ -151,7 +152,7 @@ std::optional<utils::Command> utils::splitPreserveQuotedContent(
   return command;
 }
 
-void utils::exitWithMessage(const std::string& message) {
+void utils::exitWithMessage(const std::string &message) {
   std::cerr << message << std::endl;
   exit(EXIT_FAILURE);
 }

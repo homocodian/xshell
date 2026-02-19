@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13...4.0)
 
-project(shell-starter-cpp)
+project(shell)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -20,4 +20,6 @@ if(DEFINED DEBUG_TOKEN)
     add_definitions(-DDEBUG_TOKEN)  # Define DEBUG_TOKEN macro if set
 endif()
 
-add_executable(shell ${SOURCE_FILES})
+add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+
+target_include_directories(${PROJECT_NAME} PRIVATE src)

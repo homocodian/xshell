@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -14,9 +13,8 @@
 #include <iostream>
 #endif
 
-#include "commandhdlr.h"
-#include "env.h"
-#include "utils.h"
+#include "env/env.hpp"
+#include "utils/utils.hpp"
 
 #ifdef _WIN32
 constexpr char PATH_DELIMITER = ';';
@@ -25,15 +23,16 @@ constexpr char PATH_DELIMITER = ':';
 #endif
 
 const std::vector<std::string> Env::getDirs() const {
-  const char* path = getenv("PATH");
+  const char *path = getenv("PATH");
 
-  if (!path) return {};
+  if (!path)
+    return {};
 
   return utils::split(std::string_view(path), PATH_DELIMITER);
 }
 
 std::optional<std::string> Env::getExePath(std::string_view dir,
-                                           const std::string& command) const {
+                                           const std::string &command) const {
   std::string file_path(dir);
   size_t slash_pos = dir.find_first_of("/\\");
 
@@ -62,19 +61,19 @@ std::optional<std::string> Env::getExePath(std::string_view dir,
     if (access(file_path.c_str(), R_OK | X_OK) == 0) {
       return file_path;
     }
-#endif  // _WIN32
+#endif // _WIN32
   }
 
   return std::nullopt;
 }
 
-std::optional<std::string> Env::getFilePathFromPATH(
-    const std::string& command) const {
+std::optional<std::string>
+Env::getFilePathFromPATH(const std::string &command) const {
   std::optional<std::string> exe_path = std::nullopt;
 
-  const auto& dirs = this->getDirs();
+  const auto &dirs = this->getDirs();
 
-  for (const auto& dir : dirs) {
+  for (const auto &dir : dirs) {
     exe_path = this->getExePath(dir, command);
 
     if (exe_path) {

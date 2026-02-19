@@ -3,11 +3,11 @@
 #include <string>
 #include <vector>
 
-#include "commandhdlr.h"
-#include "debug_utils.h"
-#include "env.h"
-#include "input_handler.h"
-#include "utils.h"
+#include "commands/handler.hpp"
+#include "debug/utils.hpp"
+#include "env/env.hpp"
+#include "inputs/handler.hpp"
+#include "utils/utils.hpp"
 
 int main() {
   Env env;
@@ -19,11 +19,12 @@ int main() {
     std::cout << std::unitbuf;
     std::cerr << std::unitbuf;
 
-    std::cout << "$ ";  // Print prompt
+    std::cout << "$ "; // Print prompt
 
     std::string input;
     input_handler.readInput(input);
-    if (input.empty()) continue;
+    if (input.empty())
+      continue;
 
     input = utils::trim(input);
 
@@ -38,15 +39,15 @@ int main() {
       continue;
     }
 
-    const std::vector<std::string>& tokens = command->tokens;
+    const std::vector<std::string> &tokens = command->tokens;
     size_t tokens_size = tokens.size();
 
-    const std::string& exe_command = tokens[0];
+    const std::string &exe_command = tokens[0];
 
     DBG_EXEC(
-        for (auto&& i : tokens) { std::cout << "token : " << i << "\n"; }
+        for (auto &&i : tokens) { std::cout << "token : " << i << "\n"; }
 
-        for (auto&& i : command->redirects) {
+        for (auto &&i : command->redirects) {
           std::cout << "redirect : " << i.op << " " << i.filepath << " "
                     << i.file_descriptor << "\n";
         }

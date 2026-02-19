@@ -2,22 +2,22 @@
 
 #include <string>
 
-#include "env.h"
+#include "env/env.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include <termios.h>  // Unix-specific headers
+#include <termios.h> // Unix-specific headers
 #include <unistd.h>
 #endif
 
 class InputHandler {
- public:
-  void readInput(std::string& input_buffer);
-  InputHandler(Env*);
+public:
+  void readInput(std::string &input_buffer);
+  InputHandler(Env *);
 
- private:
-  Env* env;
+private:
+  Env *env;
   char getKey();
   void enableRawMode();
   void disableRawMode();
