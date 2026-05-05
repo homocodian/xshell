@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "env/env.hpp"
@@ -8,8 +9,22 @@
 
 namespace CommandHandler {
 
-const std::vector<std::string> builtin_commands = {"type", "echo", "exit",
-                                                   "pwd", "cd"};
+enum class BuiltinType {
+  TYPE = 0,
+  ECHO_CMD,
+  EXIT,
+  PWD,
+  CD,
+  NOT_FOUND,
+};
+
+const std::unordered_map<std::string, BuiltinType> builtin_commands = {
+    {"type", BuiltinType::TYPE}, {"echo", BuiltinType::ECHO_CMD},
+    {"exit", BuiltinType::EXIT}, {"pwd", BuiltinType::PWD},
+    {"cd", BuiltinType::CD},
+};
+
+BuiltinType getBuiltinType(const std::string &command);
 
 typedef const utils::Command command_t;
 

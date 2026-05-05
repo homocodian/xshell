@@ -59,39 +59,45 @@ int main() {
         // clang-format on
     );
 
-    if (exe_command == "exit" && tokens_size == 2 &&
-        utils::isNumber(tokens[1])) {
-      return std::stoi(tokens[1]);
-    }
-
-    if (exe_command == "echo") {
-      CommandHandler::handleEchoCommand(*command);
-    }
-
-    else if (exe_command == "type") {
+    switch (CommandHandler::getBuiltinType(exe_command)) {
+    case CommandHandler::BuiltinType::TYPE: {
       CommandHandler::handleType(*command, env);
+      break;
     }
 
-    else if (exe_command == "pwd") {
-      std::cout << std::filesystem::current_path().string() << "\n";
-    }
-
-    else if (exe_command == "cd") {
+    case CommandHandler::BuiltinType::CD: {
       if (tokens_size > 2) {
         std::cerr << "cd: too many arguments\n";
       } else if (tokens_size == 2) {
         CommandHandler::changeDirectory(tokens[1]);
       }
+      break;
     }
 
-    else {
+    case CommandHandler::BuiltinType::ECHO_CMD: {
+      CommandHandler::handleEchoCommand(*command);
+      break;
+    }
+
+    case CommandHandler::BuiltinType::PWD: {
+      std::cout << std::filesystem::current_path().string() << "\n";
+      break;
+    }
+
+    case CommandHandler::BuiltinType::EXIT: {
+      if (tokens_size == 2 && utils::isNumber(tokens[1])) {
+        return std::stoi(tokens[1]);
+      }
+      break;
+    }
+
+    case CommandHandler::BuiltinType::NOT_FOUND: {
       int status = CommandHandler::run(exe_command, *command, env);
-
-      DBG_PRINT("Command exited with status: {}", status);
-
       if (status == -1) {
         std::cout << input << ": command not found" << std::endl;
       }
+      break;
+    }
     }
   }
 }

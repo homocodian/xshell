@@ -11,15 +11,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)        # Avoid compiler-specific extensions
 
 # Add debug-specific definitions (e.g., to define DEBUG macro for debug builds)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_definitions(-DDEBUG)  # Define DEBUG macro in debug builds
+  add_definitions(-DDEBUG)  # Define DEBUG macro in debug builds
 endif()
 
 # Add additional macro for DEBUG_TOKEN if it's passed via the script
 if(DEFINED DEBUG_TOKEN)
-    message(STATUS "DEBUG_TOKEN is defined.")
-    add_definitions(-DDEBUG_TOKEN)  # Define DEBUG_TOKEN macro if set
+  message(STATUS "DEBUG_TOKEN is defined.")
+  add_definitions(-DDEBUG_TOKEN)  # Define DEBUG_TOKEN macro if set
 endif()
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+
+target_link_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)

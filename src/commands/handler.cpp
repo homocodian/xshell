@@ -267,9 +267,8 @@ void CommandHandler::handleType(const command_t &command, Env &env) {
   const size_t tokens_size = command.tokens.size();
 
   for (size_t i = 1; i < tokens_size; ++i) {
-    if (std::find(CommandHandler::builtin_commands.begin(),
-                  CommandHandler::builtin_commands.end(), command.tokens[i]) !=
-        CommandHandler::builtin_commands.end()) {
+    if (CommandHandler::getBuiltinType(command.tokens[i]) !=
+        BuiltinType::NOT_FOUND) {
       std::cout << command.tokens[i] << " is a shell builtin\n";
     } else {
       std::optional<std::string> exe_path =
@@ -351,7 +350,7 @@ std::string CommandHandler::Completion::getCompletion(std::string_view prefix,
   };
 
   for (const auto &builtin_cmd : CommandHandler::builtin_commands) {
-    try_add(builtin_cmd);
+    try_add(builtin_cmd.first);
   }
 
   if (completions.empty()) {
@@ -408,4 +407,10 @@ CommandHandler::Completion::getCompletionOf() const noexcept {
 
 size_t CommandHandler::Completion::getCompletionSize() const noexcept {
   return completions.size();
+}
+
+CommandHandler::BuiltinType
+CommandHandler::getBuiltinType(const std::string &command) {
+  const auto it = builtin_commands.find(command);
+  return it != builtin_commands.end() ? it->second : BuiltinType::NOT_FOUND;
 }
