@@ -171,7 +171,7 @@ int CommandHandler::run(const std::string &exe_command,
       unix_args.emplace_back(command.tokens[i].c_str());
     }
 
-    unix_args[tokens_size] = nullptr;
+    unix_args.emplace_back(nullptr);
 
 #ifdef DEBUG
     for (size_t i = 0; i <= tokens_size; ++i) {
